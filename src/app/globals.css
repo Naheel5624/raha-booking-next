@@ -219,6 +219,18 @@ h1, h2, h3, h4 {
   font-size: 15px;
 }
 
+.slot-bubble.tiny {
+  padding: 10px 14px;
+}
+
+.slot-bubble.tiny .slot-bubble-time {
+  font-size: 14px;
+}
+
+.slot-bubble.tiny .slot-bubble-label {
+  font-size: 11px;
+}
+
 .slot-bubble.compact .slot-bubble-label {
   font-size: 12px;
 }
