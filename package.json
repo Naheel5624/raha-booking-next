@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npx @cloudflare/next-on-pages && node scripts/clean-maps.js",
+    "build": "next build && node scripts/clean-maps.js",
     "start": "next start",
     "lint": "eslint"
   },
