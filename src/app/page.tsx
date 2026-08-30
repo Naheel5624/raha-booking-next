@@ -372,12 +372,82 @@ export default function Home() {
               <div className="stat-card"><div className="stat-icon green">📅</div><div className="stat-info"><h3>{upcomingBks.length}</h3><p>Upcoming Bookings</p></div></div>
               <div className="stat-card"><div className="stat-icon red">⏳</div><div className="stat-info"><h3>₹{fmtN(pendingBalance)}</h3><p>Pending Balance</p></div></div>
             </div>
+
+            <div className="dash-grid">
+              {/* Mini Calendar */}
+              <div className="card">
+                <div className="card-header"><h2>📆 Quick View</h2></div>
+                <div className="card-body">
+                  <div className="cal-nav" style={{ marginBottom: 12 }}>
+                    <button className="btn btn-outline btn-sm" onClick={() => { setCalMonth((m) => { if (m === 0) { setCalYear((y) => y - 1); return 11; } return m - 1; }); }}>◀</button>
+                    <h3 style={{ fontSize: 16 }}>{months[calMonth]} {calYear}</h3>
+                    <button className="btn btn-outline btn-sm" onClick={() => { setCalMonth((m) => { if (m === 11) { setCalYear((y) => y + 1); return 0; } return m + 1; }); }}>▶</button>
+                  </div>
+                  <div className="cal-grid" style={{ marginBottom: 0 }}>{calCells}</div>
+                </div>
+              </div>
+
+              {/* Today's Slot Bubbles */}
+              <div className="card">
+                <div className="card-header"><h2>🏛️ Hall Status — Today</h2><button className="btn btn-outline btn-sm" onClick={() => setTab('calendar')}>Full Calendar →</button></div>
+                <div className="card-body">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                    {TIME_SLOTS.map((ts) => {
+                      const booking = todayBks.find((b) => b['Start Time'] === ts.start && b['End Time'] === ts.end);
+                      const isBooked = !!booking;
+                      return (
+                        <div key={ts.start} className={`cal-slot ${isBooked ? 'booked' : 'available'}`} style={{ maxWidth: '100%' }}
+                          onClick={() => !isBooked && goToNewBooking(today, ts.start, ts.end)}>
+                          <div className="cal-slot-period">{ts.label.split('(')[0].trim()}</div>
+                          <div className="cal-slot-time" style={{ fontSize: 18 }}>{ts.start} – {ts.end}</div>
+                          {isBooked ? (
+                            <>
+                              <div className="cal-slot-status">🔴 BOOKED</div>
+                              <div className="cal-slot-details">
+                                <strong>{esc(booking['Event Name'])}</strong> — {esc(booking['Client Name'])}
+                                <br />{booking['Booking ID']} · ₹{fmtN(booking['Total Amount'])}
+                                {booking['Payment Status'] && (
+                                  <span style={{ display: 'inline-block', fontSize: 10, padding: '1px 8px', borderRadius: 8, background: booking['Payment Status'] === 'Paid' ? '#22c55e' : booking['Payment Status'] === 'Partially Paid' ? '#f59e0b' : '#ef4444', color: '#fff', fontWeight: 700, marginLeft: 6 }}>{booking['Payment Status']}</span>
+                                )}
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="cal-slot-status">✅ AVAILABLE</div>
+                              <div className="cal-slot-details">Click to book →</div>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Recent Bookings (compact) */}
             <div className="card">
-              <div className="card-header"><h2>📋 Today&apos;s Schedule</h2><button className="btn btn-outline btn-sm" onClick={fetchBookings}>↻ Refresh</button></div>
+              <div className="card-header"><h2>📋 Today&apos;s Schedule</h2><button className="btn btn-outline btn-sm" onClick={() => setTab('today')}>View All →</button></div>
               <div className="card-body">
                 {loading ? <div className="empty-state"><div className="icon">⏳</div><h3>Loading...</h3></div>
                   : todayBks.length === 0 ? <div className="empty-state"><div className="icon">🎉</div><h3>No bookings today</h3><p>The hall is available all day.</p></div>
-                  : renderBookingsTable(todayBks.sort((a, b) => a['Start Time'].localeCompare(b['Start Time'])), false)}
+                  : todayBks.sort((a, b) => a['Start Time'].localeCompare(b['Start Time'])).map((b) => (
+                    <div key={b['Booking ID']} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 16px', borderRadius: 12, background: 'var(--beige)', marginBottom: 10, border: '1px solid var(--border-light)' }}>
+                      <div style={{ minWidth: 56, textAlign: 'center' }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>{b['Start Time']}</div>
+                        <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>to</div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)' }}>{b['End Time']}</div>
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{esc(b['Event Name'])}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{esc(b['Client Name'])} · {b['Booking ID']}</div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--primary)' }}>₹{fmtN(b['Total Amount'])}</div>
+                        <span className={`badge-status ${b['Payment Status'] === 'Paid' ? 'badge-paid' : b['Payment Status'] === 'Partially Paid' ? 'badge-partial' : 'badge-unpaid'}`}>{b['Payment Status']}</span>
+                      </div>
+                    </div>
+                  ))}
               </div>
             </div>
           </>
