@@ -326,10 +326,6 @@ export default function Home() {
     calCells.push(<div key={`n${i}`} className="cal-day other-month"><div className="cal-day-num">{i}</div></div>);
   }
 
-  const avail = daySlots.filter((s) => s.type === 'available').length;
-  const booked = daySlots.filter((s) => s.type === 'booked').length;
-  const buf = 0; // No cleaning buffer with fixed slots
-
   return (
     <>
       {/* HEADER */}
@@ -479,46 +475,61 @@ export default function Home() {
               </div>
               <div className="cal-grid">{calCells}</div>
 
-              {/* Legend */}
-              <div style={{ display: 'flex', gap: 20, marginBottom: 16, flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600 }}><span style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--success)', display: 'inline-block' }} /> Available ({avail})</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600 }}><span style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--danger)', display: 'inline-block' }} /> Booked ({booked})</div>
-
-              </div>
-
-              {/* Timeline */}
-              {loadingSlots ? <div className="empty-state"><div className="icon">⏳</div><h3>Loading...</h3></div> : daySlots.length === 0 ? (
-                <div className="empty-state"><div className="icon">📭</div><h3>Select a date</h3><p>Click any day on the calendar above to see its schedule.</p></div>
+              {/* Slot Bubbles */}
+              {loadingSlots ? (
+                <div className="empty-state"><div className="icon">⏳</div><h3>Loading...</h3></div>
+              ) : !selectedDate ? (
+                <div className="empty-state"><div className="icon">📅</div><h3>Select a date</h3><p>Click any day on the calendar to see available slots.</p></div>
               ) : (
-                <div className="timeline">
-                  {daySlots.map((s, i) => (
-                    <div key={i} className={`tl-slot ${s.type}`}>
-                      <div className="tl-time">{s.start}</div>
-                      <div className="tl-content">
-                        {s.type === 'booked' && (
+                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 8 }}>
+                  {TIME_SLOTS.map((ts) => {
+                    const booking = daySlots.find((s) => s.type === 'booked' && s.start === ts.start && s.end === ts.end);
+                    const isBooked = !!booking;
+                    return (
+                      <div key={ts.start}
+                        onClick={() => !isBooked && goToNewBooking(selectedDate, ts.start, ts.end)}
+                        style={{
+                          flex: '1 1 200px',
+                          maxWidth: 320,
+                          padding: '20px 24px',
+                          borderRadius: 14,
+                          background: isBooked ? '#2a2a3e' : 'linear-gradient(135deg, #1a4d2e 0%, #0d7a42 100%)',
+                          border: isBooked ? '2px solid #555' : '2px solid #2dd47b',
+                          cursor: isBooked ? 'not-allowed' : 'pointer',
+                          opacity: isBooked ? 0.7 : 1,
+                          transition: 'all 0.2s ease',
+                          position: 'relative',
+                          overflow: 'hidden',
+                        }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1.5, color: isBooked ? '#999' : '#6ee7a8', marginBottom: 6 }}>
+                          {ts.label.split('(')[0].trim()}
+                        </div>
+                        <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', marginBottom: 4 }}>
+                          {ts.start} – {ts.end}
+                        </div>
+                        {isBooked ? (
                           <>
-                            <span className="tl-label">Booked</span>
-                            <div className="tl-info">
-                              <strong>{esc(s.event || '')}</strong> — {esc(s.client || '')}
-                              {s.paymentStatus && <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 8, background: s.paymentStatus === 'Paid' ? 'var(--success)' : s.paymentStatus === 'Partially Paid' ? 'var(--warning)' : 'var(--danger)', color: '#fff', fontWeight: 700, marginLeft: 8 }}>{s.paymentStatus}</span>}
-                              <br /><span className="muted">{s.start} to {s.end} · {s.bookingId} · ₹{fmtN(s.total || 0)}</span>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: '#e74c3c', marginTop: 8 }}>🔴 BOOKED</div>
+                            <div style={{ fontSize: 12, color: '#ccc', marginTop: 6 }}>
+                              <strong>{esc(booking!.event || '')}</strong>
+                              <br />{esc(booking!.client || '')}
+                              <br /><span style={{ fontSize: 11, color: '#999' }}>{booking!.bookingId} · ₹{fmtN(booking!.total || 0)}</span>
+                              {booking!.paymentStatus && (
+                                <span style={{ display: 'inline-block', fontSize: 10, padding: '1px 6px', borderRadius: 8, background: booking!.paymentStatus === 'Paid' ? '#27ae60' : booking!.paymentStatus === 'Partially Paid' ? '#f39c12' : '#e74c3c', color: '#fff', fontWeight: 700, marginLeft: 6 }}>{booking!.paymentStatus}</span>
+                              )}
                             </div>
                           </>
-                        )}
-
-                        {s.type === 'available' && (
+                        ) : (
                           <>
-                            <span className="tl-label">Available</span>
-                            <div className="tl-info">
-                              ✅ Hall is free — {Math.floor((s.endMin - s.startMin) / 60)}h{(s.endMin - s.startMin) % 60 > 0 ? ` ${(s.endMin - s.startMin) % 60}m` : ''} open slot
-                              <br /><span className="muted">{s.start} to {s.end}</span>
-                              <a onClick={() => goToNewBooking(selectedDate, s.start, s.end)} style={{ fontSize: 11, color: 'var(--gold-dark)', fontWeight: 700, textDecoration: 'none', marginLeft: 8, cursor: 'pointer' }}>→ Book this slot</a>
+                            <div style={{ fontSize: 13, fontWeight: 700, color: '#6ee7a8', marginTop: 8 }}>✅ AVAILABLE</div>
+                            <div style={{ fontSize: 12, color: '#aaffcc', marginTop: 4 }}>
+                              Click to book this slot →
                             </div>
                           </>
                         )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
