@@ -1,0 +1,606 @@
+'use client';
+
+import { useState, useEffect, useCallback } from 'react';
+
+interface Booking {
+  'Booking ID': string;
+  'Event Name': string;
+  'Client Name': string;
+  'Client Email': string;
+  'Contact Phone': string;
+  'Date': string;
+  'Start Time': string;
+  'End Time': string;
+  'Total Amount': number;
+  'Amount Paid': number;
+  'Balance Due': number;
+  'Payment Status': string;
+  'Booking Status': string;
+  'Blocked Until': string;
+  'Calendar Event ID': string;
+  'Booking Notes': string;
+  'Created At': string;
+}
+
+interface TimeSlot {
+  type: 'available' | 'booked' | 'buffer';
+  start: string;
+  end: string;
+  startMin: number;
+  endMin: number;
+  event?: string;
+  client?: string;
+  bookingId?: string;
+  paymentStatus?: string;
+  total?: number;
+  paid?: number;
+}
+
+type Tab = 'dashboard' | 'new-booking' | 'today' | 'upcoming' | 'calendar';
+
+function fmtN(n: number) { return n.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 }); }
+function esc(s: string) { return s ? s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
+
+// Use LOCAL date (not UTC) to avoid timezone bugs
+function localDateStr(d: Date = new Date()): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+export default function Home() {
+  const [tab, setTab] = useState<Tab>('dashboard');
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [alertMsg, setAlertMsg] = useState<{ type: 'success' | 'error'; msg: string } | null>(null);
+
+  // Form state
+  const [form, setForm] = useState({
+    clientName: '', clientEmail: '', contactPhone: '',
+    eventName: '', eventDate: '', startTime: '', endTime: '',
+    totalAmount: '', amountPaid: '', bookingNotes: '',
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [successBooking, setSuccessBooking] = useState<Booking | null>(null);
+
+  // Calendar state
+  const [calYear, setCalYear] = useState(new Date().getFullYear());
+  const [calMonth, setCalMonth] = useState(new Date().getMonth());
+  const [selectedDate, setSelectedDate] = useState(localDateStr());
+  const [daySlots, setDaySlots] = useState<TimeSlot[]>([]);
+  const [loadingSlots, setLoadingSlots] = useState(false);
+
+  // Cancel/Payment modals
+  const [cancelId, setCancelId] = useState<string | null>(null);
+  const [cancelInfo, setCancelInfo] = useState({ event: '', client: '' });
+  const [payModal, setPayModal] = useState<{ id: string; total: number; paid: number } | null>(null);
+  const [payAmount, setPayAmount] = useState('');
+
+  const today = localDateStr();
+
+  // Fetch all bookings
+  const fetchBookings = useCallback(async () => {
+    try {
+      const res = await fetch('/api/bookings');
+      const data = await res.json();
+      if (data.success) setBookings(data.bookings || []);
+    } catch (e) {
+      console.error('Fetch bookings failed:', e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { fetchBookings(); }, [fetchBookings]);
+
+  // Auto-refresh bookings when switching to data-heavy tabs
+  useEffect(() => {
+    if (tab === 'today' || tab === 'upcoming' || tab === 'dashboard') {
+      fetchBookings();
+    }
+  }, [tab, fetchBookings]);
+
+  // Periodic refresh every 30s so data stays live
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (tab === 'today' || tab === 'upcoming' || tab === 'dashboard') {
+        fetchBookings();
+      }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [tab, fetchBookings]);
+
+  // Fetch availability for a date
+  const fetchSlots = useCallback(async (dateStr: string) => {
+    setLoadingSlots(true);
+    try {
+      const res = await fetch(`/api/availability?date=${dateStr}`);
+      const data = await res.json();
+      if (data.success) setDaySlots(data.slots || []);
+      else setDaySlots([]);
+    } catch { setDaySlots([]); }
+    finally { setLoadingSlots(false); }
+  }, []);
+
+  useEffect(() => {
+    if (tab === 'calendar') fetchSlots(selectedDate);
+  }, [tab, selectedDate, fetchSlots]);
+
+  // Computed values
+  const todayBks = bookings.filter((b) => b['Date'] === today && b['Booking Status'] !== 'Cancelled');
+  const upcomingBks = bookings.filter((b) => b['Booking Status'] !== 'Cancelled' && b['Date'] >= today);
+  const todayRevenue = todayBks.reduce((s, b) => s + (b['Amount Paid'] || 0), 0);
+  const pendingBalance = upcomingBks.reduce((s, b) => s + (b['Balance Due'] || 0), 0);
+
+  // Form helpers
+  const total = parseFloat(form.totalAmount) || 0;
+  const paid = parseFloat(form.amountPaid) || 0;
+  const balance = total - paid;
+  let payStatus = 'Unpaid';
+  if (total > 0 && balance <= 0) payStatus = 'Paid';
+  else if (paid > 0) payStatus = 'Partially Paid';
+
+  // Convert 24h time (from input[type=time]) to 12h format for storage
+  const to12h = (t24: string): string => {
+    if (!t24) return '';
+    const m = t24.match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) return t24;
+    let h = parseInt(m[1]);
+    const mi = parseInt(m[2]);
+    const ap = h >= 12 ? 'PM' : 'AM';
+    h = h % 12 || 12;
+    return `${String(h).padStart(2, '0')}:${String(mi).padStart(2, '0')} ${ap}`;
+  };
+
+  const handleFormChange = (field: string, value: string) => {
+    setForm((f) => ({ ...f, [field]: value }));
+  };
+
+  const submitBooking = async () => {
+    setAlertMsg(null);
+    if (!form.clientName.trim()) { setAlertMsg({ type: 'error', msg: 'Client Name is required.' }); return; }
+    if (!form.contactPhone.trim()) { setAlertMsg({ type: 'error', msg: 'Contact Phone is required.' }); return; }
+    if (!form.eventName.trim()) { setAlertMsg({ type: 'error', msg: 'Event Name is required.' }); return; }
+    if (!form.eventDate) { setAlertMsg({ type: 'error', msg: 'Event Date is required.' }); return; }
+    if (!form.startTime) { setAlertMsg({ type: 'error', msg: 'Start Time is required.' }); return; }
+    if (!form.endTime) { setAlertMsg({ type: 'error', msg: 'End Time is required.' }); return; }
+    if (!form.totalAmount) { setAlertMsg({ type: 'error', msg: 'Total Amount is required.' }); return; }
+    if (form.amountPaid === '') { setAlertMsg({ type: 'error', msg: 'Amount Paid is required.' }); return; }
+
+    setSubmitting(true);
+    try {
+      const res = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...form,
+          startTime: to12h(form.startTime),
+          endTime: to12h(form.endTime),
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setSuccessBooking(data.booking);
+        fetchBookings();
+      } else {
+        setAlertMsg({ type: 'error', msg: data.errors?.join('<br>') || 'Failed to create booking.' });
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Connection error';
+      setAlertMsg({ type: 'error', msg });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const cancelBooking = async () => {
+    if (!cancelId) return;
+    try {
+      const res = await fetch('/api/bookings/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId: cancelId }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCancelId(null);
+        fetchBookings();
+        alert('✅ ' + data.message);
+      } else {
+        alert('❌ ' + (data.errors?.join('\n') || 'Failed'));
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Error';
+      alert('❌ ' + msg);
+    }
+  };
+
+  const updatePayment = async () => {
+    if (!payModal) return;
+    const amt = parseFloat(payAmount);
+    if (isNaN(amt) || amt < 0) { alert('Enter a valid amount.'); return; }
+    try {
+      const res = await fetch('/api/bookings/payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId: payModal.id, amountPaid: amt }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setPayModal(null);
+        fetchBookings();
+        alert('✅ ' + data.message);
+      } else {
+        alert('❌ ' + (data.errors?.join('\n') || 'Failed'));
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Error';
+      alert('❌ ' + msg);
+    }
+  };
+
+  const goToNewBooking = (date: string, start: string, end: string) => {
+    const to24 = (t: string) => {
+      const m = t.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+      if (!m) return t;
+      let h = parseInt(m[1]);
+      const ap = m[3].toUpperCase();
+      if (ap === 'PM' && h !== 12) h += 12;
+      if (ap === 'AM' && h === 12) h = 0;
+      return `${String(h).padStart(2, '0')}:${m[2]}`;
+    };
+    setForm((f) => ({ ...f, eventDate: date, startTime: to24(start), endTime: to24(end) }));
+    setTab('new-booking');
+    setSuccessBooking(null);
+  };
+
+  const resetForm = () => {
+    setForm({ clientName: '', clientEmail: '', contactPhone: '', eventName: '', eventDate: today, startTime: '', endTime: '', totalAmount: '', amountPaid: '', bookingNotes: '' });
+    setAlertMsg(null);
+  };
+
+  const renderBookingsTable = (bks: Booking[], showActions = true) => {
+    if (!bks.length) return <div className="empty-state"><div className="icon">📭</div><h3>No bookings found</h3></div>;
+    return (
+      <div className="table-wrapper">
+        <table className="booking-table">
+          <thead><tr>
+            <th>ID</th><th>Date</th><th>Event</th><th>Client</th><th>Time</th>
+            <th>Total</th><th>Paid</th><th>Balance</th><th>Payment</th><th>Status</th>
+            {showActions && <th></th>}
+          </tr></thead>
+          <tbody>
+            {bks.map((b) => {
+              const pc = b['Payment Status'] === 'Paid' ? 'badge-paid' : b['Payment Status'] === 'Partially Paid' ? 'badge-partial' : 'badge-unpaid';
+              const sc = b['Booking Status'] === 'Cancelled' ? 'badge-cancelled' : 'badge-confirmed';
+              return (
+                <tr key={b['Booking ID']}>
+                  <td><strong>{b['Booking ID']}</strong></td>
+                  <td>{b['Date']}</td>
+                  <td>{esc(b['Event Name'])}</td>
+                  <td>{esc(b['Client Name'])}</td>
+                  <td>{b['Start Time']} – {b['End Time']}</td>
+                  <td>₹{fmtN(b['Total Amount'])}</td>
+                  <td>₹{fmtN(b['Amount Paid'])}</td>
+                  <td>₹{fmtN(b['Balance Due'])}</td>
+                  <td><span className={`badge-status ${pc}`}>{b['Payment Status']}</span></td>
+                  <td><span className={`badge-status ${sc}`}>{b['Booking Status']}</span></td>
+                  {showActions && (
+                    <td>
+                      {b['Booking Status'] !== 'Cancelled' && (
+                        <>
+                          <button className="btn btn-outline btn-sm" onClick={() => { setPayModal({ id: b['Booking ID'], total: b['Total Amount'], paid: b['Amount Paid'] }); setPayAmount(String(b['Amount Paid'])); }}>💳</button>{' '}
+                          <button className="btn btn-danger btn-sm" onClick={() => { setCancelId(b['Booking ID']); setCancelInfo({ event: b['Event Name'], client: b['Client Name'] }); }}>✕</button>
+                        </>
+                      )}
+                    </td>
+                  )}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  // Calendar rendering
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const firstDay = new Date(calYear, calMonth, 1).getDay();
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+  const prevDays = new Date(calYear, calMonth, 0).getDate();
+
+  const calCells: React.ReactNode[] = [];
+  // Prev month
+  for (let i = firstDay - 1; i >= 0; i--) {
+    calCells.push(<div key={`p${i}`} className="cal-day other-month"><div className="cal-day-num">{prevDays - i}</div></div>);
+  }
+  // Current month
+  for (let d = 1; d <= daysInMonth; d++) {
+    const ds = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const isToday = ds === today;
+    const isSel = ds === selectedDate;
+    const dayBks = bookings.filter((b) => b['Date'] === ds && b['Booking Status'] !== 'Cancelled');
+    calCells.push(
+      <div key={ds} className={`cal-day${isToday ? ' today' : ''}${isSel ? ' selected' : ''}`} onClick={() => setSelectedDate(ds)}>
+        <div className="cal-day-num">{d}</div>
+        {dayBks.length > 0 && (
+          <>
+            <div className="cal-day-count">{dayBks.length} booking{dayBks.length > 1 ? 's' : ''}</div>
+            <div className="cal-day-dots">
+              {dayBks.map((b) => (
+                <span key={b['Booking ID']} className={`cal-dot ${b['Payment Status'] === 'Paid' ? 'paid' : b['Payment Status'] === 'Partially Paid' ? 'partial' : 'booked'}`} title={b['Event Name']} />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
+  // Next month
+  const remaining = (7 - ((firstDay + daysInMonth) % 7)) % 7;
+  for (let i = 1; i <= remaining; i++) {
+    calCells.push(<div key={`n${i}`} className="cal-day other-month"><div className="cal-day-num">{i}</div></div>);
+  }
+
+  const avail = daySlots.filter((s) => s.type === 'available').length;
+  const booked = daySlots.filter((s) => s.type === 'booked').length;
+  const buf = daySlots.filter((s) => s.type === 'buffer').length;
+
+  return (
+    <>
+      {/* HEADER */}
+      <header className="header">
+        <div className="header-inner">
+          <div className="brand">
+            <div className="brand-icon">🏛️</div>
+            <div className="brand-text">
+              <h1>Raha Convention Centre</h1>
+              <p>Where moments become memories.</p>
+            </div>
+          </div>
+          <div className="header-date">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+        </div>
+      </header>
+
+      {/* NAV */}
+      <nav className="nav">
+        <div className="nav-inner">
+          {([
+            ['dashboard', '📊', 'Dashboard'],
+            ['new-booking', '➕', 'New Booking'],
+            ['today', '📋', 'Today', todayBks.length],
+            ['upcoming', '📅', 'Upcoming', upcomingBks.length],
+            ['calendar', '📆', 'Calendar'],
+          ] as [Tab, string, string, number?][]).map(([key, icon, label, count]) => (
+            <div key={key} className={`nav-tab${tab === key ? ' active' : ''}`} onClick={() => { setTab(key); setSuccessBooking(null); }}>
+              <span>{icon}</span> {label}
+              {count !== undefined && count > 0 && <span className="badge">{count}</span>}
+            </div>
+          ))}
+        </div>
+      </nav>
+
+      {/* MAIN */}
+      <main className="main">
+
+        {/* DASHBOARD */}
+        {tab === 'dashboard' && (
+          <>
+            <div className="stats-grid">
+              <div className="stat-card"><div className="stat-icon blue">📋</div><div className="stat-info"><h3>{todayBks.length}</h3><p>Today&apos;s Bookings</p></div></div>
+              <div className="stat-card"><div className="stat-icon gold">💰</div><div className="stat-info"><h3>₹{fmtN(todayRevenue)}</h3><p>Today&apos;s Revenue</p></div></div>
+              <div className="stat-card"><div className="stat-icon green">📅</div><div className="stat-info"><h3>{upcomingBks.length}</h3><p>Upcoming Bookings</p></div></div>
+              <div className="stat-card"><div className="stat-icon red">⏳</div><div className="stat-info"><h3>₹{fmtN(pendingBalance)}</h3><p>Pending Balance</p></div></div>
+            </div>
+            <div className="card">
+              <div className="card-header"><h2>📋 Today&apos;s Schedule</h2><button className="btn btn-outline btn-sm" onClick={fetchBookings}>↻ Refresh</button></div>
+              <div className="card-body">
+                {loading ? <div className="empty-state"><div className="icon">⏳</div><h3>Loading...</h3></div>
+                  : todayBks.length === 0 ? <div className="empty-state"><div className="icon">🎉</div><h3>No bookings today</h3><p>The hall is available all day.</p></div>
+                  : renderBookingsTable(todayBks.sort((a, b) => a['Start Time'].localeCompare(b['Start Time'])), false)}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* NEW BOOKING */}
+        {tab === 'new-booking' && !successBooking && (
+          <div className="card">
+            <div className="card-header"><h2>➕ Create New Booking</h2></div>
+            <div className="card-body">
+              {alertMsg && <div className={`alert alert-${alertMsg.type} show`} dangerouslySetInnerHTML={{ __html: alertMsg.msg }} />}
+              <div className="form-grid">
+                <div className="form-section-title">👤 Client Information</div>
+                <div className="form-group"><label>Client Name <span className="req">*</span></label><input value={form.clientName} onChange={(e) => handleFormChange('clientName', e.target.value)} placeholder="e.g. Ahmed Ali" /></div>
+                <div className="form-group"><label>Contact Phone <span className="req">*</span></label><input value={form.contactPhone} onChange={(e) => handleFormChange('contactPhone', e.target.value)} placeholder="e.g. +971 50 123 4567" /></div>
+                <div className="form-group"><label>Client Email</label><input type="email" value={form.clientEmail} onChange={(e) => handleFormChange('clientEmail', e.target.value)} placeholder="e.g. client@example.com" /></div>
+
+                <div className="form-section-title">🎉 Event Information</div>
+                <div className="form-group"><label>Event Name <span className="req">*</span></label><input value={form.eventName} onChange={(e) => handleFormChange('eventName', e.target.value)} placeholder="e.g. Marriage Reception" /></div>
+                <div className="form-group"><label>Event Date <span className="req">*</span></label><input type="date" min={today} value={form.eventDate} onChange={(e) => handleFormChange('eventDate', e.target.value)} /></div>
+                <div className="form-group"><label>Start Time <span className="req">*</span></label><input type="time" value={form.startTime} onChange={(e) => handleFormChange('startTime', e.target.value)} /></div>
+                <div className="form-group"><label>End Time <span className="req">*</span></label><input type="time" value={form.endTime} onChange={(e) => handleFormChange('endTime', e.target.value)} /></div>
+
+                <div className="form-section-title">💳 Payment Information</div>
+                <div className="form-group"><label>Total Amount (₹) <span className="req">*</span></label><input type="number" min="0" step="0.01" value={form.totalAmount} onChange={(e) => handleFormChange('totalAmount', e.target.value)} placeholder="0.00" /></div>
+                <div className="form-group"><label>Amount Paid (₹) <span className="req">*</span></label><input type="number" min="0" step="0.01" value={form.amountPaid} onChange={(e) => handleFormChange('amountPaid', e.target.value)} placeholder="0.00" /></div>
+                <div className="form-group"><label>Balance Due (₹)</label><div className="computed-field">₹{fmtN(balance)}</div></div>
+                <div className="form-group"><label>Payment Status</label><div className="computed-field">{payStatus}</div></div>
+
+                <div className="form-section-title">📝 Additional Notes</div>
+                <div className="form-group" style={{ gridColumn: '1 / -1' }}><textarea value={form.bookingNotes} onChange={(e) => handleFormChange('bookingNotes', e.target.value)} placeholder="Any special requirements..." /></div>
+              </div>
+              <div className="btn-group">
+                <button className="btn btn-gold" disabled={submitting} onClick={submitBooking}>
+                  {submitting ? <><span className="spinner" /> Creating...</> : '✓ Create Booking'}
+                </button>
+                <button className="btn btn-outline" onClick={resetForm}>↺ Reset</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* BOOKING SUCCESS */}
+        {tab === 'new-booking' && successBooking && (
+          <div className="card">
+            <div className="card-body">
+              <div className="success-view">
+                <div className="check-icon">✓</div>
+                <h2>Booking Confirmed!</h2>
+                <p>Your booking has been saved. A confirmation email has been sent.</p>
+                <div className="booking-id-display">{successBooking['Booking ID']}</div>
+                <div className="booking-summary">
+                  {[
+                    ['Client', successBooking['Client Name']], ['Event', successBooking['Event Name']],
+                    ['Date', successBooking['Date']], ['Time', `${successBooking['Start Time']} – ${successBooking['End Time']} (Buffer until ${successBooking['Blocked Until']})`],
+                    ['Total', `₹${fmtN(successBooking['Total Amount'])}`], ['Paid', `₹${fmtN(successBooking['Amount Paid'])}`],
+                    ['Balance', `₹${fmtN(successBooking['Balance Due'])}`], ['Payment', successBooking['Payment Status']],
+                  ].map(([l, v]) => (
+                    <div key={l} className="row"><span className="label">{l}</span><span className="value">{v}</span></div>
+                  ))}
+                </div>
+                <div className="btn-group" style={{ justifyContent: 'center' }}>
+                  <button className="btn btn-gold" onClick={() => { setSuccessBooking(null); resetForm(); }}>➕ New Booking</button>
+                  <button className="btn btn-outline" onClick={() => setTab('today')}>📋 View Today</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TODAY */}
+        {tab === 'today' && (
+          <div className="card">
+            <div className="card-header"><h2>📋 Today&apos;s Bookings</h2><button className="btn btn-outline btn-sm" onClick={fetchBookings}>↻ Refresh</button></div>
+            <div className="card-body">{loading ? <div className="empty-state"><div className="icon">⏳</div><h3>Loading...</h3></div> : renderBookingsTable(todayBks)}</div>
+          </div>
+        )}
+
+        {/* UPCOMING */}
+        {tab === 'upcoming' && (
+          <div className="card">
+            <div className="card-header"><h2>📅 Upcoming Bookings</h2><button className="btn btn-outline btn-sm" onClick={fetchBookings}>↻ Refresh</button></div>
+            <div className="card-body">{loading ? <div className="empty-state"><div className="icon">⏳</div><h3>Loading...</h3></div> : renderBookingsTable(upcomingBks)}</div>
+          </div>
+        )}
+
+        {/* CALENDAR */}
+        {tab === 'calendar' && (
+          <div className="card">
+            <div className="card-header"><h2>📆 Hall Calendar</h2></div>
+            <div className="card-body">
+              <div className="cal-nav">
+                <button className="btn btn-outline btn-sm" onClick={() => { setCalMonth((m) => { if (m === 0) { setCalYear((y) => y - 1); return 11; } return m - 1; }); }}>◀ Prev</button>
+                <h3>{months[calMonth]} {calYear}</h3>
+                <button className="btn btn-outline btn-sm" onClick={() => { setCalMonth((m) => { if (m === 11) { setCalYear((y) => y + 1); return 0; } return m + 1; }); }}>Next ▶</button>
+              </div>
+              <div className="cal-grid">{calCells}</div>
+
+              {/* Legend */}
+              <div style={{ display: 'flex', gap: 20, marginBottom: 16, flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600 }}><span style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--success)', display: 'inline-block' }} /> Available ({avail})</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600 }}><span style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--danger)', display: 'inline-block' }} /> Booked ({booked})</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600 }}><span style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--warning)', display: 'inline-block' }} /> Cleaning Buffer ({buf})</div>
+              </div>
+
+              {/* Timeline */}
+              {loadingSlots ? <div className="empty-state"><div className="icon">⏳</div><h3>Loading...</h3></div> : daySlots.length === 0 ? (
+                <div className="empty-state"><div className="icon">📭</div><h3>Select a date</h3><p>Click any day on the calendar above to see its schedule.</p></div>
+              ) : (
+                <div className="timeline">
+                  {daySlots.map((s, i) => (
+                    <div key={i} className={`tl-slot ${s.type}`}>
+                      <div className="tl-time">{s.start}</div>
+                      <div className="tl-content">
+                        {s.type === 'booked' && (
+                          <>
+                            <span className="tl-label">Booked</span>
+                            <div className="tl-info">
+                              <strong>{esc(s.event || '')}</strong> — {esc(s.client || '')}
+                              {s.paymentStatus && <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 8, background: s.paymentStatus === 'Paid' ? 'var(--success)' : s.paymentStatus === 'Partially Paid' ? 'var(--warning)' : 'var(--danger)', color: '#fff', fontWeight: 700, marginLeft: 8 }}>{s.paymentStatus}</span>}
+                              <br /><span className="muted">{s.start} to {s.end} · {s.bookingId} · ₹{fmtN(s.total || 0)}</span>
+                            </div>
+                          </>
+                        )}
+                        {s.type === 'buffer' && (
+                          <>
+                            <span className="tl-label">Cleaning</span>
+                            <div className="tl-info">🧹 Hall preparation &amp; cleaning<br /><span className="muted">{s.start} to {s.end}</span></div>
+                          </>
+                        )}
+                        {s.type === 'available' && (
+                          <>
+                            <span className="tl-label">Available</span>
+                            <div className="tl-info">
+                              ✅ Hall is free — {Math.floor((s.endMin - s.startMin) / 60)}h{(s.endMin - s.startMin) % 60 > 0 ? ` ${(s.endMin - s.startMin) % 60}m` : ''} open slot
+                              <br /><span className="muted">{s.start} to {s.end}</span>
+                              <a onClick={() => goToNewBooking(selectedDate, s.start, s.end)} style={{ fontSize: 11, color: 'var(--gold-dark)', fontWeight: 700, textDecoration: 'none', marginLeft: 8, cursor: 'pointer' }}>→ Book this slot</a>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* CANCEL MODAL */}
+      <div className={`modal-overlay${cancelId ? ' show' : ''}`} onClick={() => setCancelId(null)}>
+        <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-header"><h3>⚠️ Confirm Cancellation</h3><button className="modal-close" onClick={() => setCancelId(null)}>✕</button></div>
+          <div className="modal-body">
+            <p style={{ marginBottom: 16, fontSize: 14 }}>Are you sure you want to cancel this booking?</p>
+            <div style={{ background: 'var(--bg)', padding: 14, borderRadius: 8, fontSize: 13, marginBottom: 20, border: '1px solid var(--border-light)' }}>
+              <strong>ID:</strong> {cancelId}<br /><strong>Event:</strong> {esc(cancelInfo.event)}<br /><strong>Client:</strong> {esc(cancelInfo.client)}
+            </div>
+            <div className="btn-group" style={{ marginTop: 0 }}>
+              <button className="btn btn-danger" onClick={cancelBooking}>Yes, Cancel</button>
+              <button className="btn btn-outline" onClick={() => setCancelId(null)}>Go Back</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* PAYMENT MODAL */}
+      <div className={`modal-overlay${payModal ? ' show' : ''}`} onClick={() => setPayModal(null)}>
+        <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-header"><h3>💳 Update Payment</h3><button className="modal-close" onClick={() => setPayModal(null)}>✕</button></div>
+          <div className="modal-body">
+            {payModal && (
+              <>
+                <div style={{ background: 'var(--bg)', padding: 14, borderRadius: 8, fontSize: 13, marginBottom: 16, border: '1px solid var(--border-light)' }}>
+                  <strong>ID:</strong> {payModal.id}<br /><strong>Total:</strong> ₹{fmtN(payModal.total)}<br /><strong>Currently Paid:</strong> ₹{fmtN(payModal.paid)}
+                </div>
+                <div className="form-group" style={{ marginBottom: 16 }}>
+                  <label>Amount Paid (₹)</label>
+                  <input type="number" min="0" max={payModal.total} step="0.01" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label>New Balance</label>
+                  <div className="computed-field">₹{fmtN(payModal.total - (parseFloat(payAmount) || 0))}</div>
+                </div>
+                <div className="btn-group" style={{ marginTop: 16 }}>
+                  <button className="btn btn-success" onClick={updatePayment}>💾 Save Payment</button>
+                  <button className="btn btn-outline" onClick={() => setPayModal(null)}>Cancel</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* LOADING */}
+      <div className={`loading-overlay${submitting ? ' show' : ''}`}>
+        <div className="spinner" />
+        <p>Processing...</p>
+      </div>
+    </>
+  );
+}

@@ -1,0 +1,566 @@
+▲ Next.js 16.3.3 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.5:3000
+- Environments: .env.local
+✓ Ready in 887ms
+✓ Running next.config.ts took 56ms
+
+ GET / 200 in 459ms (next.js: 248ms, application-code: 210ms)
+ GET / 200 in 74ms (next.js: 21ms, application-code: 53ms)
+Failed to read from Google Sheets: Error: error:1E08010C:DECODER routines::unsupported
+    at new Promise (<anonymous>)
+    at new Promise (<anonymous>)
+    at new Promise (<anonymous>)
+    at async getSheet (src\lib\sheets.ts:33:23)
+    at async getAllBookings (src\lib\sheets.ts:102:20)
+    at async GET (src\app\api\bookings\route.ts:15:22)
+  31 |
+  32 |   // Check if Bookings sheet exists
+> 33 |   const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+     |                       ^
+  34 |   const existingSheets = spreadsheet.data.sheets || [];
+  35 |   const bookingsSheet = existingSheets.find(
+  36 |     (s) => s.properties?.title === SHEET_NAME {
+  opensslErrorStack: [ 'error:1E08010C:DECODER routines::unsupported' ],
+  library: 'DECODER routines',
+  reason: 'unsupported',
+  code: 'ERR_OSSL_UNSUPPORTED'
+}
+ GET /api/bookings 200 in 1935ms (next.js: 1144ms, application-code: 791ms)
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <HotReload globalError={[...]} webSocket={WebSocket} staticIndicatorState={{pathname:null, ...}}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/" notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head headCacheNode={{rsc:{...}, ...}}>
+                    <__next_viewport_boundary__>
+                    <MetadataWrapper>
+                      <div
+                        hidden={true}
+-                       bis_skin_checked="1"
+                      >
+                    ...
+                  <__next_root_layout_boundary__>
+                    <SegmentViewNode type="layout" pagePath="layout.tsx">
+                      <SegmentTrieNode>
+                      <link>
+                      <script>
+                      <RootLayout>
+                        <html lang="en">
+                          <body
+                            className="cormorant_garamond_b3d7ef63-module__pNdxfG__variable dm_sans_79fbf70f-module__9..."
+-                           __processed_77fc2ffa-bd2e-4e59-ad02-f2b62f09ce18__="true"
+-                           bis_register="W3sibWFzdGVyIjp0cnVlLCJleHRlbnNpb25JZCI6ImVwcGlvY2VtaG1ubGJoanBsY2drb2ZjaWll..."
+                          >
+                            ...
+                              <SegmentViewNode type="page" pagePath="page.tsx">
+                                <SegmentTrieNode>
+                                <ClientPageRoot Component={function Home} serverProvidedParams={{...}}>
+                                  <Home params={Promise} searchParams={Promise}>
+                                    <header className="header">
+                                      <div
+                                        className="header-inner"
+-                                       bis_skin_checked="1"
+                                      >
+                                        <div
+                                          className="brand"
+-                                         bis_skin_checked="1"
+                                        >
+                                          <div
+                                            className="brand-icon"
+-                                           bis_skin_checked="1"
+                                          >
++                                           🏛️
+                                          <div
+                                            className="brand-text"
+-                                           bis_skin_checked="1"
+                                          >
+                                        <div
+                                          className="header-date"
+-                                         bis_skin_checked="1"
+                                        >
++                                         Saturday, August 29, 2026
+                                    <nav className="nav">
+                                      <div
+                                        className="nav-inner"
+-                                       bis_skin_checked="1"
+                                      >
+                                        <div
+                                          className="nav-tab active"
+                                          onClick={function onClick}
+-                                         bis_skin_checked="1"
+                                        >
+                                        <div
+                                          className="nav-tab"
+                                          onClick={function onClick}
+-                                         bis_skin_checked="1"
+                                        >
+                                        <div
+                                          className="nav-tab"
+                                          onClick={function onClick}
+-                                         bis_skin_checked="1"
+                                        >
+                                        <div
+                                          className="nav-tab"
+                                          onClick={function onClick}
+-                                         bis_skin_checked="1"
+                                        >
+                                        <div
+                                          className="nav-tab"
+                                          onClick={function onClick}
+-                                         bis_skin_checked="1"
+                                        >
+                                    <main className="main">
+                                      <div
+                                        className="stats-grid"
+-                                       bis_skin_checked="1"
+                                      >
+                                        <div
+                                          className="stat-card"
+-                                         bis_skin_checked="1"
+                                        >
+                                          <div
+                                            className="stat-icon blue"
+-                                           bis_skin_checked="1"
+                                          >
++                                           📋
+                                          <div
+                                            className="stat-info"
+-                                           bis_skin_checked="1"
+                                          >
+                                        <div
+                                          className="stat-card"
+-                                         bis_skin_checked="1"
+                                        >
+                                          <div
+                                            className="stat-icon gold"
+-                                           bis_skin_checked="1"
+                                          >
++                                           💰
+                                          <div
+                                            className="stat-info"
+-                                           bis_skin_checked="1"
+                                          >
+                                        <div
+                                          className="stat-card"
+-                                         bis_skin_checked="1"
+                                        >
+                                          <div
+                                            className="stat-icon green"
+-                                           bis_skin_checked="1"
+                                          >
++                                           📅
+                                          <div
+                                            className="stat-info"
+-                                           bis_skin_checked="1"
+                                          >
+                                        <div
+                                          className="stat-card"
+-                                         bis_skin_checked="1"
+                                        >
+                                          <div
+                                            className="stat-icon red"
+-                                           bis_skin_checked="1"
+                                          >
++                                           ⏳
+                                          <div
+                                            className="stat-info"
+-                                           bis_skin_checked="1"
+                                          >
+                                      <div
+                                        className="card"
+-                                       bis_skin_checked="1"
+                                      >
+                                        <div
+                                          className="card-header"
+-                                         bis_skin_checked="1"
+                                        >
+                                        <div
+                                          className="card-body"
+-                                         bis_skin_checked="1"
+                                        >
+                                          <div
+                                            className="empty-state"
+-                                           bis_skin_checked="1"
+                                          >
+                                            <div
+                                              className="icon"
+-                                             bis_skin_checked="1"
+                                            >
++                                             ⏳
+                                            ...
+                                    <div
+                                      className="modal-overlay"
+                                      onClick={function onClick}
+-                                     bis_skin_checked="1"
+                                    >
+                                      <div
+                                        className="modal"
+                                        onClick={function onClick}
+-                                       bis_skin_checked="1"
+                                      >
+                                        <div
+                                          className="modal-header"
+-                                         bis_skin_checked="1"
+                                        >
+                                        <div
+                                          className="modal-body"
+-                                         bis_skin_checked="1"
+                                        >
+                                          <p>
+                                          <div
+                                            style={{background:"var(--bg)",padding:14,borderRadius:8,fontSize:13,marginBottom:20,border:"1p..."}}
+-                                           bis_skin_checked="1"
+                                          >
+                                          <div
+                                            className="btn-group"
+                                            style={{marginTop:0}}
+-                                           bis_skin_checked="1"
+                                          >
+                                    <div
+                                      className="modal-overlay"
+                                      onClick={function onClick}
+-                                     bis_skin_checked="1"
+                                    >
+                                      <div
+                                        className="modal"
+                                        onClick={function onClick}
+-                                       bis_skin_checked="1"
+                                      >
+                                        <div
+                                          className="modal-header"
+-                                         bis_skin_checked="1"
+                                        >
+                                        <div
+                                          className="modal-body"
+-                                         bis_skin_checked="1"
+                                        >
+                                    <div
+                                      className="loading-overlay"
+-                                     bis_skin_checked="1"
+                                    >
+                                      <div
+                                        className="spinner"
+-                                       bis_skin_checked="1"
+                                      >
+                                      ...
+                  ...
+ 
+Failed to read from Google Sheets: Error: error:1E08010C:DECODER routines::unsupported
+    at new Promise (<anonymous>)
+    at new Promise (<anonymous>)
+    at new Promise (<anonymous>)
+    at async getSheet (src\lib\sheets.ts:33:23)
+    at async getAllBookings (src\lib\sheets.ts:102:20)
+    at async GET (src\app\api\bookings\route.ts:15:22)
+  31 |
+  32 |   // Check if Bookings sheet exists
+> 33 |   const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+     |                       ^
+  34 |   const existingSheets = spreadsheet.data.sheets || [];
+  35 |   const bookingsSheet = existingSheets.find(
+  36 |     (s) => s.properties?.title === SHEET_NAME {
+  opensslErrorStack: [ 'error:1E08010C:DECODER routines::unsupported' ],
+  library: 'DECODER routines',
+  reason: 'unsupported',
+  code: 'ERR_OSSL_UNSUPPORTED'
+}
+ GET /api/bookings 200 in 47ms (next.js: 9ms, application-code: 38ms)
+ GET / 200 in 68ms (next.js: 8ms, application-code: 60ms)
+ GET / 200 in 49ms (next.js: 8ms, application-code: 41ms)
+ GET / 200 in 68ms (next.js: 8ms, application-code: 60ms)
+Failed to read from Google Sheets: Error: error:1E08010C:DECODER routines::unsupported
+    at new Promise (<anonymous>)
+    at new Promise (<anonymous>)
+    at new Promise (<anonymous>)
+    at async getSheet (src\lib\sheets.ts:33:23)
+    at async getAllBookings (src\lib\sheets.ts:102:20)
+    at async GET (src\app\api\bookings\route.ts:15:22)
+  31 |
+  32 |   // Check if Bookings sheet exists
+> 33 |   const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+     |                       ^
+  34 |   const existingSheets = spreadsheet.data.sheets || [];
+  35 |   const bookingsSheet = existingSheets.find(
+  36 |     (s) => s.properties?.title === SHEET_NAME {
+  opensslErrorStack: [ 'error:1E08010C:DECODER routines::unsupported' ],
+  library: 'DECODER routines',
+  reason: 'unsupported',
+  code: 'ERR_OSSL_UNSUPPORTED'
+}
+ GET /api/bookings 200 in 34ms (next.js: 10ms, application-code: 24ms)
+Failed to read from Google Sheets: Error: error:1E08010C:DECODER routines::unsupported
+    at new Promise (<anonymous>)
+    at new Promise (<anonymous>)
+    at new Promise (<anonymous>)
+    at async getSheet (src\lib\sheets.ts:33:23)
+    at async getAllBookings (src\lib\sheets.ts:102:20)
+    at async GET (src\app\api\bookings\route.ts:15:22)
+  31 |
+  32 |   // Check if Bookings sheet exists
+> 33 |   const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+     |                       ^
+  34 |   const existingSheets = spreadsheet.data.sheets || [];
+  35 |   const bookingsSheet = existingSheets.find(
+  36 |     (s) => s.properties?.title === SHEET_NAME {
+  opensslErrorStack: [ 'error:1E08010C:DECODER routines::unsupported' ],
+  library: 'DECODER routines',
+  reason: 'unsupported',
+  code: 'ERR_OSSL_UNSUPPORTED'
+}
+ GET /api/bookings 200 in 24ms (next.js: 9ms, application-code: 14ms)
+ GET / 200 in 49ms (next.js: 7ms, application-code: 41ms)
+Failed to read from Google Sheets: Error: error:1E08010C:DECODER routines::unsupported
+    at new Promise (<anonymous>)
+    at new Promise (<anonymous>)
+    at new Promise (<anonymous>)
+    at async getSheet (src\lib\sheets.ts:33:23)
+    at async getAllBookings (src\lib\sheets.ts:102:20)
+    at async GET (src\app\api\bookings\route.ts:15:22)
+  31 |
+  32 |   // Check if Bookings sheet exists
+> 33 |   const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+     |                       ^
+  34 |   const existingSheets = spreadsheet.data.sheets || [];
+  35 |   const bookingsSheet = existingSheets.find(
+  36 |     (s) => s.properties?.title === SHEET_NAME {
+  opensslErrorStack: [ 'error:1E08010C:DECODER routines::unsupported' ],
+  library: 'DECODER routines',
+  reason: 'unsupported',
+  code: 'ERR_OSSL_UNSUPPORTED'
+}
+ GET /api/bookings 200 in 23ms (next.js: 7ms, application-code: 16ms)
+Failed to read from Google Sheets: Error: error:1E08010C:DECODER routines::unsupported
+    at new Promise (<anonymous>)
+    at new Promise (<anonymous>)
+    at new Promise (<anonymous>)
+    at async getSheet (src\lib\sheets.ts:33:23)
+    at async getAllBookings (src\lib\sheets.ts:102:20)
+    at async GET (src\app\api\bookings\route.ts:15:22)
+  31 |
+  32 |   // Check if Bookings sheet exists
+> 33 |   const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+     |                       ^
+  34 |   const existingSheets = spreadsheet.data.sheets || [];
+  35 |   const bookingsSheet = existingSheets.find(
+  36 |     (s) => s.properties?.title === SHEET_NAME {
+  opensslErrorStack: [ 'error:1E08010C:DECODER routines::unsupported' ],
+  library: 'DECODER routines',
+  reason: 'unsupported',
+  code: 'ERR_OSSL_UNSUPPORTED'
+}
+ GET /api/bookings 200 in 18ms (next.js: 5ms, application-code: 13ms)
+Failed to read from Google Sheets: Error: error:1E08010C:DECODER routines::unsupported
+    at new Promise (<anonymous>)
+    at new Promise (<anonymous>)
+    at new Promise (<anonymous>)
+    at async getSheet (src\lib\sheets.ts:33:23)
+    at async getAllBookings (src\lib\sheets.ts:102:20)
+    at async GET (src\app\api\availability\route.ts:12:22)
+  31 |
+  32 |   // Check if Bookings sheet exists
+> 33 |   const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+     |                       ^
+  34 |   const existingSheets = spreadsheet.data.sheets || [];
+  35 |   const bookingsSheet = existingSheets.find(
+  36 |     (s) => s.properties?.title === SHEET_NAME {
+  opensslErrorStack: [ 'error:1E08010C:DECODER routines::unsupported' ],
+  library: 'DECODER routines',
+  reason: 'unsupported',
+  code: 'ERR_OSSL_UNSUPPORTED'
+}
+ GET /api/availability?date=2026-08-29 200 in 130ms (next.js: 83ms, application-code: 47ms)
+ GET / 200 in 101ms (next.js: 20ms, application-code: 81ms)
+[browser] A tree hydrated but some attributes of the server rendered HTML didn't match the client properties. This won't be patched up. This can happen if a SSR-ed Client Component used:
+
+- A server/client branch `if (typeof window !== 'undefined')`.
+- Variable input such as `Date.now()` or `Math.random()` which changes each time it's called.
+- Date formatting in a user's locale which doesn't match the server.
+- External changing data without sending a snapshot of it along with the HTML.
+- Invalid HTML tag nesting.
+
+It can also happen if the client has a browser extension installed which messes with the HTML before React loaded.
+
+https://react.dev/link/hydration-mismatch
+
+  ...
+    <HotReload globalError={[...]} webSocket={WebSocket} staticIndicatorState={{pathname:null, ...}}>
+      <AppDevOverlayErrorBoundary globalError={[...]}>
+        <ReplaySsrOnlyErrors>
+        <DevRootHTTPAccessFallbackBoundary>
+          <HTTPAccessFallbackBoundary notFound={<NotAllowedRootHTTPFallbackError>}>
+            <HTTPAccessFallbackErrorBoundary pathname="/" notFound={<NotAllowedRootHTTPFallbackError>} ...>
+              <RedirectBoundary>
+                <RedirectErrorBoundary router={{...}}>
+                  <Head>
+                  <__next_root_layout_boundary__>
+                    <SegmentViewNode type="layout" pagePath="layout.tsx">
+                      <SegmentTrieNode>
+                      <link>
+                      <script>
+                      <RootLayout>
+                        <html lang="en">
+                          <body
+                            className="cormorant_garamond_b3d7ef63-module__pNdxfG__variable dm_sans_79fbf70f-module__9..."
+-                           __processed_106cb29b-550b-40c6-8fc8-093b91b0c24a__="true"
+                          >
+                  ...
+ 
+Failed to read from Google Sheets: Error: error:1E08010C:DECODER routines::unsupported
+    at new Promise (<anonymous>)
+    at new Promise (<anonymous>)
+    at new Promise (<anonymous>)
+    at async getSheet (src\lib\sheets.ts:33:23)
+    at async getAllBookings (src\lib\sheets.ts:102:20)
+    at async GET (src\app\api\bookings\route.ts:15:22)
+  31 |
+  32 |   // Check if Bookings sheet exists
+> 33 |   const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+     |                       ^
+  34 |   const existingSheets = spreadsheet.data.sheets || [];
+  35 |   const bookingsSheet = existingSheets.find(
+  36 |     (s) => s.properties?.title === SHEET_NAME {
+  opensslErrorStack: [ 'error:1E08010C:DECODER routines::unsupported' ],
+  library: 'DECODER routines',
+  reason: 'unsupported',
+  code: 'ERR_OSSL_UNSUPPORTED'
+}
+ GET /api/bookings 200 in 33ms (next.js: 11ms, application-code: 22ms)
+Failed to read from Google Sheets: Error: error:1E08010C:DECODER routines::unsupported
+    at new Promise (<anonymous>)
+    at new Promise (<anonymous>)
+    at new Promise (<anonymous>)
+    at async getSheet (src\lib\sheets.ts:33:23)
+    at async getAllBookings (src\lib\sheets.ts:102:20)
+    at async GET (src\app\api\bookings\route.ts:15:22)
+  31 |
+  32 |   // Check if Bookings sheet exists
+> 33 |   const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+     |                       ^
+  34 |   const existingSheets = spreadsheet.data.sheets || [];
+  35 |   const bookingsSheet = existingSheets.find(
+  36 |     (s) => s.properties?.title === SHEET_NAME {
+  opensslErrorStack: [ 'error:1E08010C:DECODER routines::unsupported' ],
+  library: 'DECODER routines',
+  reason: 'unsupported',
+  code: 'ERR_OSSL_UNSUPPORTED'
+}
+ GET /api/bookings 200 in 29ms (next.js: 7ms, application-code: 21ms)
+Failed to read from Google Sheets: Error: error:1E08010C:DECODER routines::unsupported
+    at new Promise (<anonymous>)
+    at new Promise (<anonymous>)
+    at new Promise (<anonymous>)
+    at async getSheet (src\lib\sheets.ts:33:23)
+    at async getAllBookings (src\lib\sheets.ts:102:20)
+    at async GET (src\app\api\availability\route.ts:12:22)
+  31 |
+  32 |   // Check if Bookings sheet exists
+> 33 |   const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+     |                       ^
+  34 |   const existingSheets = spreadsheet.data.sheets || [];
+  35 |   const bookingsSheet = existingSheets.find(
+  36 |     (s) => s.properties?.title === SHEET_NAME {
+  opensslErrorStack: [ 'error:1E08010C:DECODER routines::unsupported' ],
+  library: 'DECODER routines',
+  reason: 'unsupported',
+  code: 'ERR_OSSL_UNSUPPORTED'
+}
+ GET /api/availability?date=2026-08-29 200 in 29ms (next.js: 10ms, application-code: 19ms)
+Failed to read from Google Sheets: Error: error:1E08010C:DECODER routines::unsupported
+    at new Promise (<anonymous>)
+    at new Promise (<anonymous>)
+    at new Promise (<anonymous>)
+    at async getSheet (src\lib\sheets.ts:33:23)
+    at async getAllBookings (src\lib\sheets.ts:102:20)
+    at async GET (src\app\api\availability\route.ts:12:22)
+  31 |
+  32 |   // Check if Bookings sheet exists
+> 33 |   const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+     |                       ^
+  34 |   const existingSheets = spreadsheet.data.sheets || [];
+  35 |   const bookingsSheet = existingSheets.find(
+  36 |     (s) => s.properties?.title === SHEET_NAME {
+  opensslErrorStack: [ 'error:1E08010C:DECODER routines::unsupported' ],
+  library: 'DECODER routines',
+  reason: 'unsupported',
+  code: 'ERR_OSSL_UNSUPPORTED'
+}
+ GET /api/availability?date=2026-08-19 200 in 46ms (next.js: 13ms, application-code: 33ms)
+Failed to read from Google Sheets: Error: error:1E08010C:DECODER routines::unsupported
+    at new Promise (<anonymous>)
+    at new Promise (<anonymous>)
+    at new Promise (<anonymous>)
+    at async getSheet (src\lib\sheets.ts:33:23)
+    at async getAllBookings (src\lib\sheets.ts:102:20)
+    at async GET (src\app\api\availability\route.ts:12:22)
+  31 |
+  32 |   // Check if Bookings sheet exists
+> 33 |   const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+     |                       ^
+  34 |   const existingSheets = spreadsheet.data.sheets || [];
+  35 |   const bookingsSheet = existingSheets.find(
+  36 |     (s) => s.properties?.title === SHEET_NAME {
+  opensslErrorStack: [ 'error:1E08010C:DECODER routines::unsupported' ],
+  library: 'DECODER routines',
+  reason: 'unsupported',
+  code: 'ERR_OSSL_UNSUPPORTED'
+}
+ GET /api/availability?date=2026-08-31 200 in 45ms (next.js: 15ms, application-code: 30ms)
+ GET / 200 in 248ms (next.js: 27ms, application-code: 221ms)
+Failed to read from Google Sheets: Error: error:1E08010C:DECODER routines::unsupported
+    at new Promise (<anonymous>)
+    at new Promise (<anonymous>)
+    at new Promise (<anonymous>)
+    at async getSheet (src\lib\sheets.ts:33:23)
+    at async getAllBookings (src\lib\sheets.ts:102:20)
+    at async GET (src\app\api\bookings\route.ts:15:22)
+  31 |
+  32 |   // Check if Bookings sheet exists
+> 33 |   const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+     |                       ^
+  34 |   const existingSheets = spreadsheet.data.sheets || [];
+  35 |   const bookingsSheet = existingSheets.find(
+  36 |     (s) => s.properties?.title === SHEET_NAME {
+  opensslErrorStack: [ 'error:1E08010C:DECODER routines::unsupported' ],
+  library: 'DECODER routines',
+  reason: 'unsupported',
+  code: 'ERR_OSSL_UNSUPPORTED'
+}
+ GET /api/bookings 200 in 37ms (next.js: 8ms, application-code: 29ms)
+Failed to read from Google Sheets: Error: error:1E08010C:DECODER routines::unsupported
+    at new Promise (<anonymous>)
+    at new Promise (<anonymous>)
+    at new Promise (<anonymous>)
+    at async getSheet (src\lib\sheets.ts:33:23)
+    at async getAllBookings (src\lib\sheets.ts:102:20)
+    at async GET (src\app\api\bookings\route.ts:15:22)
+  31 |
+  32 |   // Check if Bookings sheet exists
+> 33 |   const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+     |                       ^
+  34 |   const existingSheets = spreadsheet.data.sheets || [];
+  35 |   const bookingsSheet = existingSheets.find(
+  36 |     (s) => s.properties?.title === SHEET_NAME {
+  opensslErrorStack: [ 'error:1E08010C:DECODER routines::unsupported' ],
+  library: 'DECODER routines',
+  reason: 'unsupported',
+  code: 'ERR_OSSL_UNSUPPORTED'
+}
+ GET /api/bookings 200 in 18ms (next.js: 5ms, application-code: 14ms)
+[?25h
