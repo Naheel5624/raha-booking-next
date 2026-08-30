@@ -1,6 +1,13 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+let resend: Resend | null = null;
+
+function getResend() {
+  if (!resend && process.env.RESEND_API_KEY) {
+    resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resend;
+}
 
 const COMPANY = process.env.NEXT_PUBLIC_COMPANY_NAME || 'Raha Convention Centre';
 const TAGLINE = process.env.NEXT_PUBLIC_TAGLINE || 'Where moments become memories.';
@@ -22,6 +29,12 @@ interface EmailData {
 
 export async function sendBookingConfirmation(data: EmailData): Promise<boolean> {
   if (!data.clientEmail) return true; // No email → skip silently
+
+  const resendClient = getResend();
+  if (!resendClient) {
+    console.warn('Resend not configured — skipping email for', data.bookingId);
+    return true; // Don't fail the booking if email isn't configured
+  }
 
   const fromEmail = process.env.EMAIL_FROM || `Raha Convention Centre <noreply@resend.dev>`;
 
@@ -70,7 +83,7 @@ export async function sendBookingConfirmation(data: EmailData): Promise<boolean>
 </table></td></tr></table></body></html>`;
 
   try {
-    await resend.emails.send({
+    await resendClient.emails.send({
       from: fromEmail,
       to: data.clientEmail,
       subject: `Booking Confirmation - ${data.bookingId} | ${COMPANY}`,

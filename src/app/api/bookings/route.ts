@@ -83,13 +83,21 @@ export async function POST(req: NextRequest) {
     // Generate booking ID
     const bookingId = generateBookingId(bookings, eventDate);
 
-    // Parse end time for buffer calculation
-    const endMin =
-      (() => {
-        const m = endTime.match(/(\d{1,2}):(\d{2})/);
-        if (m) return parseInt(m[1]) * 60 + parseInt(m[2]);
-        return 0;
-      })();
+    // Parse end time for buffer calculation (handle both 12h and 24h formats)
+    const endMin = (() => {
+      const m12 = endTime.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)/i);
+      if (m12) {
+        let h = parseInt(m12[1]);
+        const mi = parseInt(m12[2]);
+        const ap = m12[4].toUpperCase();
+        if (ap === 'PM' && h !== 12) h += 12;
+        if (ap === 'AM' && h === 12) h = 0;
+        return h * 60 + mi;
+      }
+      const m24 = endTime.match(/(\d{1,2}):(\d{2})/);
+      if (m24) return parseInt(m24[1]) * 60 + parseInt(m24[2]);
+      return 0;
+    })();
     const blockEnd = endMin + bufferMin;
     const h = Math.floor(blockEnd / 60);
     const mi = blockEnd % 60;
