@@ -397,7 +397,7 @@ export default function Home() {
                 <div className="card-body">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                     {TIME_SLOTS.map((ts) => {
-                      const normTime = (t) => t.replace(/^(d):/, '0$1:');
+                      const normTime = (t: string) => t.replace(/^(d):/, '0$1:');
                       const booking = todayBks.find((b) => normTime(b['Start Time']) === ts.start && normTime(b['End Time']) === ts.end);
                       const isBooked = !!booking;
                       return (
@@ -566,7 +566,7 @@ export default function Home() {
               ) : (
                 <div className="slot-bubbles-row">
                   {TIME_SLOTS.map((ts) => {
-                    const normTime2 = (t) => t.replace(/^(d):/, '0$1:');
+                    const normTime2 = (t: string) => t.replace(/^(d):/, '0$1:');
                     const booking = daySlots.find((s) => s.type === 'booked' && normTime2(s.start) === ts.start && normTime2(s.end) === ts.end);
                     const isBooked = !!booking;
                     return (
