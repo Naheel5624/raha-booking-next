@@ -71,9 +71,22 @@ export async function POST(req: NextRequest) {
     if (balance <= 0) paymentStatus = 'Paid';
     else if (paid > 0) paymentStatus = 'Partially Paid';
 
-    const bufferMin = parseInt(process.env.BUFFER_MINUTES || '120');
+    // Validate time slots — only 2 allowed slots
+    const ALLOWED_SLOTS = [
+      { start: '10:00 AM', end: '02:00 PM' },
+      { start: '06:00 PM', end: '10:00 PM' },
+    ];
+    const slotValid = ALLOWED_SLOTS.some(
+      (s) => s.start === startTime && s.end === endTime
+    );
+    if (!slotValid) {
+      return NextResponse.json({
+        success: false,
+        errors: ['Invalid time slot. Allowed slots: 10:00 AM–2:00 PM or 6:00 PM–10:00 PM.'],
+      }, { status: 400 });
+    }
 
-    // Check availability
+    // Check availability (no buffer — slots have natural gap)
     const bookings = await getAllBookings();
     const avail = checkAvailability(bookings, eventDate, startTime, endTime);
     if (!avail.available) {
@@ -82,26 +95,6 @@ export async function POST(req: NextRequest) {
 
     // Generate booking ID
     const bookingId = generateBookingId(bookings, eventDate);
-
-    // Parse end time for buffer calculation (handle both 12h and 24h formats)
-    const endMin = (() => {
-      const m12 = endTime.match(/(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)/i);
-      if (m12) {
-        let h = parseInt(m12[1]);
-        const mi = parseInt(m12[2]);
-        const ap = m12[4].toUpperCase();
-        if (ap === 'PM' && h !== 12) h += 12;
-        if (ap === 'AM' && h === 12) h = 0;
-        return h * 60 + mi;
-      }
-      const m24 = endTime.match(/(\d{1,2}):(\d{2})/);
-      if (m24) return parseInt(m24[1]) * 60 + parseInt(m24[2]);
-      return 0;
-    })();
-    const blockEnd = endMin + bufferMin;
-    const h = Math.floor(blockEnd / 60);
-    const mi = blockEnd % 60;
-    const blockedUntil = `${String(h % 12 || 12).padStart(2, '0')}:${String(mi).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`;
 
     const now = new Date().toISOString();
     const booking: Booking = {
@@ -118,7 +111,7 @@ export async function POST(req: NextRequest) {
       'Balance Due': balance,
       'Payment Status': paymentStatus,
       'Booking Status': 'Confirmed',
-      'Blocked Until': blockedUntil,
+      'Blocked Until': endTime,
       'Calendar Event ID': '',
       'Booking Notes': (bookingNotes || '').trim(),
       'Created At': now,
@@ -140,7 +133,7 @@ export async function POST(req: NextRequest) {
       amountPaid: paid,
       balanceDue: balance,
       paymentStatus,
-      blockedUntil,
+      blockedUntil: endTime,
     }).catch((e) => console.error('Email failed:', e));
 
     return NextResponse.json({

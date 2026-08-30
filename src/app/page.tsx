@@ -141,17 +141,11 @@ export default function Home() {
   if (total > 0 && balance <= 0) payStatus = 'Paid';
   else if (paid > 0) payStatus = 'Partially Paid';
 
-  // Convert 24h time (from input[type=time]) to 12h format for storage
-  const to12h = (t24: string): string => {
-    if (!t24) return '';
-    const m = t24.match(/^(\d{1,2}):(\d{2})$/);
-    if (!m) return t24;
-    let h = parseInt(m[1]);
-    const mi = parseInt(m[2]);
-    const ap = h >= 12 ? 'PM' : 'AM';
-    h = h % 12 || 12;
-    return `${String(h).padStart(2, '0')}:${String(mi).padStart(2, '0')} ${ap}`;
-  };
+  // Available time slots
+  const TIME_SLOTS = [
+    { label: 'Morning (10:00 AM – 2:00 PM)', start: '10:00 AM', end: '02:00 PM' },
+    { label: 'Evening (6:00 PM – 10:00 PM)', start: '06:00 PM', end: '10:00 PM' },
+  ];
 
   const handleFormChange = (field: string, value: string) => {
     setForm((f) => ({ ...f, [field]: value }));
@@ -173,11 +167,7 @@ export default function Home() {
       const res = await fetch('/api/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...form,
-          startTime: to12h(form.startTime),
-          endTime: to12h(form.endTime),
-        }),
+        body: JSON.stringify(form),
       });
       const data = await res.json();
       if (data.success) {
@@ -238,19 +228,10 @@ export default function Home() {
       const msg = e instanceof Error ? e.message : 'Error';
       alert('❌ ' + msg);
     }
-  };
-
-  const goToNewBooking = (date: string, start: string, end: string) => {
-    const to24 = (t: string) => {
-      const m = t.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
-      if (!m) return t;
-      let h = parseInt(m[1]);
-      const ap = m[3].toUpperCase();
-      if (ap === 'PM' && h !== 12) h += 12;
-      if (ap === 'AM' && h === 12) h = 0;
-      return `${String(h).padStart(2, '0')}:${m[2]}`;
-    };
-    setForm((f) => ({ ...f, eventDate: date, startTime: to24(start), endTime: to24(end) }));
+  };    const goToNewBooking = (date: string, start: string, end: string) => {
+    // Find matching slot or default
+    const match = TIME_SLOTS.find((ts) => ts.start === start && ts.end === end);
+    setForm((f) => ({ ...f, eventDate: date, startTime: match ? match.start : start, endTime: match ? match.end : end }));
     setTab('new-booking');
     setSuccessBooking(null);
   };
@@ -347,7 +328,7 @@ export default function Home() {
 
   const avail = daySlots.filter((s) => s.type === 'available').length;
   const booked = daySlots.filter((s) => s.type === 'booked').length;
-  const buf = daySlots.filter((s) => s.type === 'buffer').length;
+  const buf = 0; // No cleaning buffer with fixed slots
 
   return (
     <>
@@ -421,8 +402,7 @@ export default function Home() {
                 <div className="form-section-title">🎉 Event Information</div>
                 <div className="form-group"><label>Event Name <span className="req">*</span></label><input value={form.eventName} onChange={(e) => handleFormChange('eventName', e.target.value)} placeholder="e.g. Marriage Reception" /></div>
                 <div className="form-group"><label>Event Date <span className="req">*</span></label><input type="date" min={today} value={form.eventDate} onChange={(e) => handleFormChange('eventDate', e.target.value)} /></div>
-                <div className="form-group"><label>Start Time <span className="req">*</span></label><input type="time" value={form.startTime} onChange={(e) => handleFormChange('startTime', e.target.value)} /></div>
-                <div className="form-group"><label>End Time <span className="req">*</span></label><input type="time" value={form.endTime} onChange={(e) => handleFormChange('endTime', e.target.value)} /></div>
+                <div className="form-group"><label>Time Slot <span className="req">*</span></label><select value={`${form.startTime}|${form.endTime}`} onChange={(e) => { const [s, en] = e.target.value.split('|'); setForm((f) => ({ ...f, startTime: s, endTime: en })); }}><option value="">Select a time slot</option>{TIME_SLOTS.map((ts) => (<option key={ts.start} value={`${ts.start}|${ts.end}`}>{ts.label}</option>))}</select></div>
 
                 <div className="form-section-title">💳 Payment Information</div>
                 <div className="form-group"><label>Total Amount (₹) <span className="req">*</span></label><input type="number" min="0" step="0.01" value={form.totalAmount} onChange={(e) => handleFormChange('totalAmount', e.target.value)} placeholder="0.00" /></div>
@@ -455,7 +435,7 @@ export default function Home() {
                 <div className="booking-summary">
                   {[
                     ['Client', successBooking['Client Name']], ['Event', successBooking['Event Name']],
-                    ['Date', successBooking['Date']], ['Time', `${successBooking['Start Time']} – ${successBooking['End Time']} (Buffer until ${successBooking['Blocked Until']})`],
+                    ['Date', successBooking['Date']], ['Time', `${successBooking['Start Time']} – ${successBooking['End Time']}`],
                     ['Total', `₹${fmtN(successBooking['Total Amount'])}`], ['Paid', `₹${fmtN(successBooking['Amount Paid'])}`],
                     ['Balance', `₹${fmtN(successBooking['Balance Due'])}`], ['Payment', successBooking['Payment Status']],
                   ].map(([l, v]) => (
@@ -503,7 +483,7 @@ export default function Home() {
               <div style={{ display: 'flex', gap: 20, marginBottom: 16, flexWrap: 'wrap' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600 }}><span style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--success)', display: 'inline-block' }} /> Available ({avail})</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600 }}><span style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--danger)', display: 'inline-block' }} /> Booked ({booked})</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600 }}><span style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--warning)', display: 'inline-block' }} /> Cleaning Buffer ({buf})</div>
+
               </div>
 
               {/* Timeline */}
@@ -525,12 +505,7 @@ export default function Home() {
                             </div>
                           </>
                         )}
-                        {s.type === 'buffer' && (
-                          <>
-                            <span className="tl-label">Cleaning</span>
-                            <div className="tl-info">🧹 Hall preparation &amp; cleaning<br /><span className="muted">{s.start} to {s.end}</span></div>
-                          </>
-                        )}
+
                         {s.type === 'available' && (
                           <>
                             <span className="tl-label">Available</span>
