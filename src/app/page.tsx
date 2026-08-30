@@ -175,6 +175,7 @@ export default function Home() {
         setSuccessBooking(data.booking);
         resetForm();
         fetchBookings();
+        setTab('dashboard');
       } else {
         setAlertMsg({ type: 'error', msg: data.errors?.join('<br>') || 'Failed to create booking.' });
       }
@@ -396,7 +397,8 @@ export default function Home() {
                 <div className="card-body">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                     {TIME_SLOTS.map((ts) => {
-                      const booking = todayBks.find((b) => b['Start Time'] === ts.start && b['End Time'] === ts.end);
+                      const normTime = (t) => t.replace(/^(d):/, '0$1:');
+                      const booking = todayBks.find((b) => normTime(b['Start Time']) === ts.start && normTime(b['End Time']) === ts.end);
                       const isBooked = !!booking;
                       return (
                         <div key={ts.start} className={`cal-slot ${isBooked ? 'booked' : 'available'}`} style={{ maxWidth: '100%' }}
@@ -564,7 +566,8 @@ export default function Home() {
               ) : (
                 <div className="slot-bubbles-row">
                   {TIME_SLOTS.map((ts) => {
-                    const booking = daySlots.find((s) => s.type === 'booked' && s.start === ts.start && s.end === ts.end);
+                    const normTime2 = (t) => t.replace(/^(d):/, '0$1:');
+                    const booking = daySlots.find((s) => s.type === 'booked' && normTime2(s.start) === ts.start && normTime2(s.end) === ts.end);
                     const isBooked = !!booking;
                     return (
                       <div key={ts.start}

@@ -220,15 +220,20 @@ h1, h2, h3, h4 {
 }
 
 .slot-bubble.tiny {
-  padding: 10px 14px;
+  padding: 12px 16px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .slot-bubble.tiny .slot-bubble-time {
-  font-size: 14px;
+  font-size: 16px;
 }
 
 .slot-bubble.tiny .slot-bubble-label {
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .slot-bubble.compact .slot-bubble-label {
