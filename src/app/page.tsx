@@ -173,6 +173,7 @@ export default function Home() {
       const data = await res.json();
       if (data.success) {
         setSuccessBooking(data.booking);
+        resetForm();
         fetchBookings();
       } else {
         setAlertMsg({ type: 'error', msg: data.errors?.join('<br>') || 'Failed to create booking.' });
@@ -261,7 +262,7 @@ export default function Home() {
                   <td><strong>{b['Booking ID']}</strong></td>
                   <td>{b['Date']}</td>
                   <td>{esc(b['Event Name'])}</td>
-                  <td><span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 8, background: b['Hall Type'] === 'Mini Hall' ? '#f3e8ff' : '#dbeafe', color: b['Hall Type'] === 'Mini Hall' ? '#7c3aed' : '#2563eb', fontWeight: 700 }}>{b['Hall Type'] || 'Main Hall'}</span></td>
+                  <td><span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 8, background: b['Hall Type'] === 'Mini Hall' ? '#f3e8ff' : '#dbeafe', color: b['Hall Type'] === 'Mini Hall' ? '#7c3aed' : '#2563eb', fontWeight: 700, whiteSpace: 'nowrap' }}>{b['Hall Type'] || 'Main Hall'}</span></td>
                   <td>{esc(b['Client Name'])}</td>
                   <td>{b['Start Time']} – {b['End Time']}</td>
                   <td>₹{fmtN(b['Total Amount'])}</td>
@@ -272,10 +273,10 @@ export default function Home() {
                   {showActions && (
                     <td>
                       {b['Booking Status'] !== 'Cancelled' && (
-                        <>
+                        <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
                           <button className="btn btn-outline btn-sm" onClick={() => { setPayModal({ id: b['Booking ID'], total: b['Total Amount'], paid: b['Amount Paid'] }); setPayAmount(String(b['Amount Paid'])); }}>💳</button>{' '}
                           <button className="btn btn-danger btn-sm" onClick={() => { setCancelId(b['Booking ID']); setCancelInfo({ event: b['Event Name'], client: b['Client Name'] }); }}>✕</button>
-                        </>
+                        </div>
                       )}
                     </td>
                   )}
@@ -471,14 +472,12 @@ export default function Home() {
                 <div className="form-group"><label>Event Name <span className="req">*</span></label><input value={form.eventName} onChange={(e) => handleFormChange('eventName', e.target.value)} placeholder="e.g. Marriage Reception" /></div>
                 <div className="form-group"><label>Event Date <span className="req">*</span></label><input type="date" min={today} value={form.eventDate} onChange={(e) => handleFormChange('eventDate', e.target.value)} /></div>
 
-                <div style={{ gridColumn: "1 / -1", display: "grid", gridTemplateColumns: "1fr 2fr", gap: 20, alignItems: "start" }}>
-                  <div className="form-group">
-                    <label>Hall Type <span className="req">*</span></label>
-                    <div className="slot-bubbles" style={{ marginTop: 6, flexDirection: "column" }}>{["Main Hall", "Mini Hall"].map((ht) => { const isSelected = form.hallType === ht; return (<div key={ht} className={`slot-bubble tiny${isSelected ? " selected" : ""}`} onClick={() => setForm((f) => ({ ...f, hallType: ht }))}><div className="slot-bubble-label">{ht === "Main Hall" ? "🏛️" : "🏠"} {ht}</div><div className="slot-bubble-check">✓</div></div>); })}</div>
-                  </div>
-                  <div className="form-group">
-                    <label>Time Slot <span className="req">*</span></label>
-                    <div className="slot-bubbles" style={{ marginTop: 6 }}>{TIME_SLOTS.map((ts) => { const isSelected = form.startTime === ts.start && form.endTime === ts.end; return (<div key={ts.start} className={`slot-bubble tiny${isSelected ? ' selected' : ''}`} onClick={() => setForm((f) => ({ ...f, startTime: ts.start, endTime: ts.end }))}><div className="slot-bubble-label">{ts.label.split('(')[0].trim()}</div><div className="slot-bubble-time">{ts.start} – {ts.end}</div><div className="slot-bubble-check">✓</div></div>); })}</div>
+                <div className="form-group" style={{ gridColumn: "1 / -1" }}>
+                  <label>Hall Type &amp; Time Slot <span className="req">*</span></label>
+                  <div className="slot-bubbles" style={{ marginTop: 6 }}>
+                    {["Main Hall", "Mini Hall"].map((ht) => { const isHt = form.hallType === ht; return (<div key={ht} className={`slot-bubble tiny${isHt ? " selected" : ""}`} onClick={() => setForm((f) => ({ ...f, hallType: ht }))}><div className="slot-bubble-label">{ht === "Main Hall" ? "🏛️" : "🏠"} {ht}</div><div className="slot-bubble-check">✓</div></div>); })}
+                    <div style={{ width: 2, height: 36, background: "var(--border)", margin: "0 4px", flexShrink: 0 }}></div>
+                    {TIME_SLOTS.map((ts) => { const isTs = form.startTime === ts.start && form.endTime === ts.end; return (<div key={ts.start} className={`slot-bubble tiny${isTs ? " selected" : ""}`} onClick={() => setForm((f) => ({ ...f, startTime: ts.start, endTime: ts.end }))}><div className="slot-bubble-label">{ts.label.split("(")[0].trim()}</div><div className="slot-bubble-time">{ts.start} – {ts.end}</div><div className="slot-bubble-check">✓</div></div>); })}
                   </div>
                 </div>
 
