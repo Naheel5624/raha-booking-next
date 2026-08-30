@@ -405,7 +405,7 @@ export default function Home() {
           <tbody>
             {bks.map((b) => {
               const pc = b['Payment Status'] === 'Paid' ? 'badge-paid' : b['Payment Status'] === 'Partially Paid' ? 'badge-partial' : 'badge-unpaid';
-              const sc = b['Booking Status'] === 'Cancelled' ? 'badge-cancelled' : 'badge-confirmed';
+              const sc = b['Booking Status'] === 'Cancelled' ? 'badge-cancelled' : b['Booking Status'] === 'Pending' ? 'badge-pending' : 'badge-confirmed';
               return (
                 <tr key={b['Booking ID']}>
                   <td><strong>{b['Booking ID']}</strong></td>
@@ -470,9 +470,12 @@ export default function Home() {
           <>
             <div className="cal-day-count">{dayBks.length} booking{dayBks.length > 1 ? 's' : ''}</div>
             <div className="cal-day-dots">
-              {dayBks.map((b) => (
-                <span key={b['Booking ID']} className={`cal-dot ${b['Payment Status'] === 'Paid' ? 'paid' : b['Payment Status'] === 'Partially Paid' ? 'partial' : 'booked'}`} title={b['Event Name']} />
-              ))}
+              {dayBks.map((b) => {
+                const dotClass = b['Booking Status'] === 'Pending' ? 'pending' : b['Payment Status'] === 'Paid' ? 'paid' : b['Payment Status'] === 'Partially Paid' ? 'partial' : 'booked';
+                return (
+                  <span key={b['Booking ID']} className={`cal-dot ${dotClass}`} title={`${b['Event Name']} (${b['Booking Status']})`} />
+                );
+              })}
             </div>
           </>
         )}
