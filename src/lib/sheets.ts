@@ -32,6 +32,33 @@ function getAuth() {
   });
 }
 
+// Normalize any date format to YYYY-MM-DD for consistent comparisons
+// Handles: 2026-09-25, 25-Sep-2026, 25/09/2026, Sep 25, 2026, etc.
+function normalizeDate(d: string): string {
+  if (!d) return '';
+  d = String(d).trim();
+  // Already ISO format
+  if (/^\d{4}-\d{2}-\d{2}$/.test(d)) return d;
+  // DD-Mon-YYYY (e.g. 25-Sep-2026)
+  const m1 = d.match(/^(\d{1,2})[-\/](\w{3,})[-\/](\d{4})$/);
+  if (m1) {
+    const months: Record<string, string> = { jan:'01',feb:'02',mar:'03',apr:'04',may:'05',jun:'06',jul:'07',aug:'08',sep:'09',oct:'10',nov:'11',dec:'12' };
+    const mon = months[m1[2].toLowerCase().slice(0, 3)];
+    if (mon) return `${m1[3]}-${mon}-${m1[1].padStart(2, '0')}`;
+  }
+  // DD/MM/YYYY or MM/DD/YYYY
+  const m2 = d.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+  if (m2) return `${m2[3]}-${m2[2].padStart(2, '0')}-${m2[1].padStart(2, '0')}`;
+  // Fallback
+  try {
+    const dt = new Date(d + 'T00:00:00');
+    if (!isNaN(dt.getTime())) {
+      return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+    }
+  } catch {}
+  return d;
+}
+
 async function getSheet() {
   const auth = getAuth();
   const sheets = google.sheets({ version: 'v4', auth });
@@ -139,6 +166,8 @@ export async function getAllBookings(): Promise<Booking[]> {
       obj['Total Amount'] = parseFloat(obj['Total Amount'] as string) || 0;
       obj['Amount Paid'] = parseFloat(obj['Amount Paid'] as string) || 0;
       obj['Balance Due'] = parseFloat(obj['Balance Due'] as string) || 0;
+      // Normalize date to YYYY-MM-DD for consistent comparisons
+      obj['Date'] = normalizeDate(obj['Date'] as string);
       return obj as unknown as Booking;
     });
   } catch (err) {
@@ -153,7 +182,12 @@ export async function appendBooking(booking: Booking): Promise<void> {
   }
 
   const sheets = await getSheet();
-  const row = HEADERS.map((h) => booking[h as keyof Booking] ?? '');
+  const row = HEADERS.map((h) => {
+    const val = booking[h as keyof Booking] ?? '';
+    // Prefix date with ' to prevent Google Sheets auto-formatting
+    if (h === 'Date' && val) return "'" + val;
+    return val;
+  });
   await sheets.spreadsheets.values.append({
     spreadsheetId: SPREADSHEET_ID,
     range: `${SHEET_NAME}!A:R`,
