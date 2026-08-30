@@ -113,7 +113,6 @@ export async function POST(req: NextRequest) {
       'Balance Due': balance,
       'Payment Status': paymentStatus,
       'Booking Status': 'Confirmed',
-      'Calendar Event ID': '',
       'Booking Notes': (bookingNotes || '').trim(),
       'Created At': now,
     };

@@ -17,7 +17,6 @@ interface Booking {
   'Payment Status': string;
   'Booking Status': string;
   'Hall Type': string;
-  'Calendar Event ID': string;
   'Booking Notes': string;
   'Created At': string;
 }

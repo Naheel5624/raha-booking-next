@@ -7,7 +7,7 @@ const HEADERS = [
   'Booking ID', 'Event Name', 'Client Name', 'Client Email',
   'Contact Phone', 'Date', 'Start Time', 'End Time',
   'Total Amount', 'Amount Paid', 'Balance Due', 'Payment Status',
-  'Booking Status', 'Hall Type', 'Calendar Event ID',
+  'Booking Status', 'Hall Type',
   'Booking Notes', 'Created At'
 ];
 
@@ -111,7 +111,6 @@ export interface Booking {
   'Payment Status': string;
   'Booking Status': string;
   'Hall Type': string;
-  'Calendar Event ID': string;
   'Booking Notes': string;
   'Created At': string;
 }
