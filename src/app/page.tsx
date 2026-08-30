@@ -158,6 +158,7 @@ export default function Home() {
     if (!form.eventName.trim()) { setAlertMsg({ type: 'error', msg: 'Event Name is required.' }); return; }
     if (!form.hallType) { setAlertMsg({ type: 'error', msg: 'Please select a Hall Type.' }); return; }
     if (!form.eventDate) { setAlertMsg({ type: 'error', msg: 'Event Date is required.' }); return; }
+    if (form.eventDate && form.eventDate < today) { setAlertMsg({ type: 'error', msg: 'Event Date cannot be in the past.' }); return; }
     if (!form.startTime) { setAlertMsg({ type: 'error', msg: 'Start Time is required.' }); return; }
     if (!form.endTime) { setAlertMsg({ type: 'error', msg: 'End Time is required.' }); return; }
     if (!form.totalAmount) { setAlertMsg({ type: 'error', msg: 'Total Amount is required.' }); return; }
@@ -316,9 +317,10 @@ export default function Home() {
     const ds = `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
     const isToday = ds === today;
     const isSel = ds === selectedDate;
+    const isPast = ds < today;
     const dayBks = bookings.filter((b) => b['Date'] === ds && b['Booking Status'] !== 'Cancelled');
     calCells.push(
-      <div key={ds} className={`cal-day${isToday ? ' today' : ''}${isSel ? ' selected' : ''}`} onClick={() => setSelectedDate(ds)}>
+      <div key={ds} className={`cal-day${isToday ? ' today' : ''}${isSel ? ' selected' : ''}${isPast ? ' past' : ''}`} style={isPast ? { opacity: 0.4, cursor: 'default' } : undefined} onClick={() => { if (!isPast) setSelectedDate(ds); }}>
         <div className="cal-day-num">{d}</div>
         {dayBks.length > 0 && (
           <>
@@ -572,6 +574,8 @@ export default function Home() {
                 <div className="empty-state"><div className="icon">⏳</div><h3>Loading...</h3></div>
               ) : !selectedDate ? (
                 <div className="empty-state"><div className="icon">📅</div><h3>Select a date</h3><p>Click any day on the calendar to see available slots.</p></div>
+              ) : selectedDate < today ? (
+                <div className="empty-state"><div className="icon">🔒</div><h3>This date has passed</h3><p>Past dates cannot be booked. Select today or a future date.</p></div>
               ) : (
                 <div className="slot-bubbles-row">
                   {TIME_SLOTS.map((ts) => {
