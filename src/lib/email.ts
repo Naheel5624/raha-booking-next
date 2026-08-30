@@ -24,7 +24,6 @@ interface EmailData {
   amountPaid: number;
   balanceDue: number;
   paymentStatus: string;
-  blockedUntil: string;
 }
 
 export async function sendBookingConfirmation(data: EmailData): Promise<boolean> {
@@ -65,7 +64,7 @@ export async function sendBookingConfirmation(data: EmailData): Promise<boolean>
 <tr style="background:#f5f5f5;"><td style="padding:12px 16px;font-weight:600;color:#1B2A4A;font-size:14px;">Client Name</td><td style="padding:12px 16px;color:#212121;font-size:14px;">${data.clientName}</td></tr>
 <tr><td style="padding:12px 16px;font-weight:600;color:#1B2A4A;font-size:14px;">Event Date</td><td style="padding:12px 16px;color:#212121;font-size:14px;">${data.eventDate}</td></tr>
 <tr style="background:#f5f5f5;"><td style="padding:12px 16px;font-weight:600;color:#1B2A4A;font-size:14px;">Start Time</td><td style="padding:12px 16px;color:#212121;font-size:14px;">${data.startTime}</td></tr>
-<tr><td style="padding:12px 16px;font-weight:600;color:#1B2A4A;font-size:14px;">End Time</td><td style="padding:12px 16px;color:#212121;font-size:14px;">${data.endTime} (Buffer until ${data.blockedUntil})</td></tr>
+<tr><td style="padding:12px 16px;font-weight:600;color:#1B2A4A;font-size:14px;">End Time</td><td style="padding:12px 16px;color:#212121;font-size:14px;">${data.endTime}</td></tr>
 <tr style="background:#E8EAF6;"><td style="padding:12px 16px;font-weight:700;color:#1B2A4A;font-size:14px;">Total Amount</td><td style="padding:12px 16px;color:#1B2A4A;font-size:16px;font-weight:700;">₹${data.totalAmount.toLocaleString('en-IN')}</td></tr>
 <tr><td style="padding:12px 16px;font-weight:600;color:#1B2A4A;font-size:14px;">Amount Paid</td><td style="padding:12px 16px;color:#2E7D32;font-size:14px;font-weight:600;">₹${data.amountPaid.toLocaleString('en-IN')}</td></tr>
 <tr style="background:#f5f5f5;"><td style="padding:12px 16px;font-weight:600;color:#1B2A4A;font-size:14px;">Balance Due</td><td style="padding:12px 16px;color:#B71C1C;font-size:14px;font-weight:600;">₹${data.balanceDue.toLocaleString('en-IN')}</td></tr>

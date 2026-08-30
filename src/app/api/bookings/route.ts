@@ -113,7 +113,6 @@ export async function POST(req: NextRequest) {
       'Balance Due': balance,
       'Payment Status': paymentStatus,
       'Booking Status': 'Confirmed',
-      'Blocked Until': endTime,
       'Calendar Event ID': '',
       'Booking Notes': (bookingNotes || '').trim(),
       'Created At': now,
@@ -135,7 +134,6 @@ export async function POST(req: NextRequest) {
       amountPaid: paid,
       balanceDue: balance,
       paymentStatus,
-      blockedUntil: endTime,
     }).catch((e) => console.error('Email failed:', e));
 
     return NextResponse.json({

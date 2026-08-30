@@ -16,7 +16,6 @@ interface Booking {
   'Balance Due': number;
   'Payment Status': string;
   'Booking Status': string;
-  'Blocked Until': string;
   'Hall Type': string;
   'Calendar Event ID': string;
   'Booking Notes': string;

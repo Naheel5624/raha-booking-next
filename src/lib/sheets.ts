@@ -7,8 +7,8 @@ const HEADERS = [
   'Booking ID', 'Event Name', 'Client Name', 'Client Email',
   'Contact Phone', 'Date', 'Start Time', 'End Time',
   'Total Amount', 'Amount Paid', 'Balance Due', 'Payment Status',
-  'Booking Status', 'Blocked Until', 'Calendar Event ID',
-  'Hall Type', 'Booking Notes', 'Created At'
+  'Booking Status', 'Hall Type', 'Calendar Event ID',
+  'Booking Notes', 'Created At'
 ];
 
 function getAuth() {
@@ -110,7 +110,6 @@ export interface Booking {
   'Balance Due': number;
   'Payment Status': string;
   'Booking Status': string;
-  'Blocked Until': string;
   'Hall Type': string;
   'Calendar Event ID': string;
   'Booking Notes': string;
