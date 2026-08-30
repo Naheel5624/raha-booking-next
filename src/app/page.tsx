@@ -42,6 +42,114 @@ type Tab = 'dashboard' | 'new-booking' | 'today' | 'upcoming' | 'calendar';
 function fmtN(n: number) { return n.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 }); }
 function esc(s: string) { return s ? s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
 
+function printReceipt(b: Record<string, string | number>) {
+  const id = b['Booking ID'];
+  const clientName = b['Client Name'];
+  const phone = b['Contact Phone'];
+  const secPhone = b['Secondary Contact'];
+  const email = b['Client Email'];
+  const event = b['Event Name'];
+  const date = b['Date'];
+  const start = b['Start Time'];
+  const end = b['End Time'];
+  const hall = b['Hall Type'] || 'Main Hall';
+  const total = Number(b['Total Amount']) || 0;
+  const paid = Number(b['Amount Paid']) || 0;
+  const balance = Number(b['Balance Due']) || 0;
+  const payStatus = b['Payment Status'];
+  const bookStatus = b['Booking Status'];
+  const notes = b['Booking Notes'] || '';
+  const dateFormatted = new Date(date + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+  const html = `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Receipt - ${id}</title>
+<style>
+@page { size: A4; margin: 15mm; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; background: #fff; padding: 20px; }
+.receipt { max-width: 700px; margin: 0 auto; border: 2px solid #6B1D2A; border-radius: 12px; overflow: hidden; }
+.header-bar { background: linear-gradient(135deg, #4A0E1A 0%, #6B1D2A 50%, #8B2E3D 100%); color: #fff; padding: 28px 30px; text-align: center; border-bottom: 3px solid #C9A84C; }
+.header-bar h1 { font-size: 24px; font-weight: 700; margin-bottom: 4px; }
+.header-bar p { font-size: 13px; color: #E0C878; font-style: italic; }
+.receipt-title { text-align: center; padding: 16px; background: #F5F0E8; border-bottom: 1px solid #E8E0D8; }
+.receipt-title h2 { font-size: 18px; color: #6B1D2A; }
+.receipt-title .id-badge { display: inline-block; background: #6B1D2A; color: #fff; padding: 4px 16px; border-radius: 20px; font-size: 14px; font-weight: 700; letter-spacing: 1px; margin-top: 6px; }
+.body { padding: 24px 30px; }
+.section { margin-bottom: 20px; }
+.section-title { font-size: 12px; font-weight: 700; color: #6B1D2A; text-transform: uppercase; letter-spacing: 1.5px; padding-bottom: 6px; border-bottom: 2px solid #C9A84C; margin-bottom: 10px; }
+.row { display: flex; padding: 7px 0; border-bottom: 1px solid #f0f0f0; font-size: 13px; }
+.row:last-child { border-bottom: none; }
+.row .label { font-weight: 600; color: #888; width: 40%; }
+.row .value { font-weight: 600; color: #333; width: 60%; }
+.payment-box { background: #F5F0E8; border: 1px solid #E8E0D8; border-radius: 8px; padding: 16px; margin-top: 10px; }
+.payment-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 13px; }
+.payment-row.total { font-size: 16px; font-weight: 700; color: #6B1D2A; border-top: 2px solid #C9A84C; padding-top: 10px; margin-top: 6px; }
+.status-badge { display: inline-block; padding: 3px 14px; border-radius: 12px; font-size: 12px; font-weight: 700; color: #fff; }
+.status-paid { background: #2E7D32; }
+.status-partial { background: #F57F17; }
+.status-unpaid { background: #B71C1C; }
+.footer { background: #F5F0E8; padding: 16px 30px; text-align: center; font-size: 11px; color: #999; border-top: 1px solid #E8E0D8; }
+.footer strong { color: #6B1D2A; }
+.notes { background: #FFFDE7; border: 1px dashed #C9A84C; border-radius: 8px; padding: 12px; margin-top: 10px; font-size: 12px; color: #666; }
+@media print { body { padding: 0; } .receipt { border: 2px solid #6B1D2A; } .no-print { display: none !important; } }
+</style></head><body>
+<div class="receipt">
+  <div class="header-bar">
+    <h1>Raha Convention Centre</h1>
+    <p>Where moments become memories.</p>
+  </div>
+  <div class="receipt-title">
+    <h2>Booking Receipt</h2>
+    <div class="id-badge">${id}</div>
+  </div>
+  <div class="body">
+    <div class="section">
+      <div class="section-title">Client Details</div>
+      <div class="row"><span class="label">Name</span><span class="value">${clientName}</span></div>
+      <div class="row"><span class="label">Contact Phone</span><span class="value">${phone}</span></div>
+      <div class="row"><span class="label">Secondary Contact</span><span class="value">${secPhone}</span></div>
+      ${email ? `<div class="row"><span class="label">Email</span><span class="value">${email}</span></div>` : ''}
+    </div>
+    <div class="section">
+      <div class="section-title">Event Details</div>
+      <div class="row"><span class="label">Event Name</span><span class="value">${event}</span></div>
+      <div class="row"><span class="label">Hall</span><span class="value">${hall}</span></div>
+      <div class="row"><span class="label">Date</span><span class="value">${dateFormatted}</span></div>
+      <div class="row"><span class="label">Time</span><span class="value">${start} – ${end}</span></div>
+      <div class="row"><span class="label">Booking Status</span><span class="value">${bookStatus}</span></div>
+    </div>
+    <div class="section">
+      <div class="section-title">Payment Summary</div>
+      <div class="payment-box">
+        <div class="payment-row"><span>Total Amount</span><span>₹${fmtN(total)}</span></div>
+        <div class="payment-row"><span>Amount Paid</span><span>₹${fmtN(paid)}</span></div>
+        <div class="payment-row total"><span>Balance Due</span><span>₹${fmtN(balance)}</span></div>
+        <div style="text-align:right;margin-top:8px;"><span class="status-badge ${payStatus === 'Paid' ? 'status-paid' : payStatus === 'Partially Paid' ? 'status-partial' : 'status-unpaid'}">${payStatus}</span></div>
+      </div>
+    </div>
+    ${notes ? `<div class="section"><div class="section-title">Notes</div><div class="notes">${notes}</div></div>` : ''}
+  </div>
+  <div class="footer">
+    <strong>Raha Convention Centre</strong> · Where moments become memories.<br>
+    This is a computer-generated receipt. No signature required.
+  </div>
+</div>
+<div class="no-print" style="text-align:center;margin-top:20px;">
+  <button onclick="window.print()" style="padding:12px 32px;background:#6B1D2A;color:#fff;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;">🖨️ Print Receipt</button>
+  <button onclick="window.close()" style="padding:12px 24px;background:#f5f5f5;color:#333;border:1px solid #ddd;border-radius:8px;font-size:14px;cursor:pointer;margin-left:10px;">Close</button>
+</div>
+<script>window.onload = function() { setTimeout(function() { window.print(); }, 500); };</script>
+</body></html>`;
+
+  const w = window.open('', '_blank', 'width=800,height=600');
+  if (w) {
+    w.document.write(html);
+    w.document.close();
+  } else {
+    alert('Pop-up blocked. Please allow pop-ups for this site to print receipts.');
+  }
+}
+
 // Use LOCAL date (not UTC) to avoid timezone bugs
 function localDateStr(d: Date = new Date()): string {
   const y = d.getFullYear();
@@ -287,6 +395,7 @@ export default function Home() {
                     <td>
                       {b['Booking Status'] !== 'Cancelled' && (
                         <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+                          <button className="btn btn-outline btn-sm" onClick={() => printReceipt(b as unknown as Record<string, string | number>)} title="Print Receipt">🖨️</button>
                           <button className="btn btn-outline btn-sm" onClick={() => { setPayModal({ id: b['Booking ID'], total: b['Total Amount'], paid: b['Amount Paid'] }); setPayAmount(''); }}>💳</button>{' '}
                           <button className="btn btn-danger btn-sm" onClick={() => { setCancelId(b['Booking ID']); setCancelInfo({ event: b['Event Name'], client: b['Client Name'] }); }}>✕</button>
                         </div>
@@ -540,8 +649,9 @@ export default function Home() {
                   ))}
                 </div>
                 <div className="btn-group" style={{ justifyContent: 'center' }}>
-                  <button className="btn btn-gold" onClick={() => { setSuccessBooking(null); resetForm(); setTab('new-booking'); }}>➕ New Booking</button>
-                  <button className="btn btn-primary" onClick={() => { setSuccessBooking(null); resetForm(); setTab('dashboard'); }}>📊 Back to Dashboard</button>
+                  <button className="btn btn-gold" onClick={() => printReceipt(successBooking as unknown as Record<string, string | number>)}>🖨️ Print Receipt</button>
+                  <button className="btn btn-primary" onClick={() => { setSuccessBooking(null); resetForm(); setTab('new-booking'); }}>➕ New Booking</button>
+                  <button className="btn btn-outline" onClick={() => { setSuccessBooking(null); resetForm(); setTab('dashboard'); }}>📊 Back to Dashboard</button>
                 </div>
               </div>
             </div>
