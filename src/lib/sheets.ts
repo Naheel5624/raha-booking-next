@@ -1,6 +1,6 @@
 import { google } from 'googleapis';
 
-const SPREADSHEET_ID = process.env.GOOGLE_SPREADSHEET_ID!;
+const SPREADSHEET_ID = (process.env.GOOGLE_SPREADSHEET_ID || '').trim();
 const SHEET_NAME = 'Bookings';
 
 const HEADERS = [
@@ -12,14 +12,17 @@ const HEADERS = [
 ];
 
 function getAuth() {
-  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-  const rawKey = process.env.GOOGLE_PRIVATE_KEY || '';
-  const key = rawKey.includes('-----BEGIN')
-    ? rawKey.replace(/\\n/g, '\n').replace(/\r/g, '').trim()
-    : rawKey;
+  const email = (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || '').trim();
+  const rawKey = (process.env.GOOGLE_PRIVATE_KEY || '').trim();
 
-  if (!email || !key) {
-    throw new Error('Missing Google service account credentials in .env.local');
+  // Vercel stores \n as literal backslash-n characters.
+  // Use split/join to avoid regex escaping issues.
+  const BS = String.fromCharCode(92); // backslash character
+  const BS_N = BS + 'n'; // literal two chars: backslash + n
+  const key = rawKey.split(BS_N).join('\n');
+
+  if (!email || !key || !key.includes('-----BEGIN')) {
+    throw new Error('Missing or invalid Google service account credentials');
   }
 
   return new google.auth.GoogleAuth({
@@ -95,7 +98,6 @@ export interface Booking {
 }
 
 export async function getAllBookings(): Promise<Booking[]> {
-  // Return empty array if credentials are not configured
   if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY || !process.env.GOOGLE_SPREADSHEET_ID) {
     console.warn('Google Sheets credentials not configured. Returning empty bookings.');
     return [];
@@ -224,7 +226,7 @@ export interface TimeSlot {
 }
 
 export function buildTimeline(bookings: Booking[], dateStr: string): TimeSlot[] {
-  const buffer = parseInt(process.env.BUFFER_MINUTES || '120');
+  const buffer = parseInt(process.env.BUFFER_MINUTES || '0');
   const dayStart = 8 * 60; // 8:00 AM
   const dayEnd = 22 * 60;  // 10:00 PM
 
@@ -279,18 +281,13 @@ export function checkAvailability(
   endTime: string,
   excludeId?: string
 ): { available: boolean; reason?: string } {
-  const buffer = parseInt(process.env.BUFFER_MINUTES || '120');
+  const buffer = parseInt(process.env.BUFFER_MINUTES || '0');
   const reqStart = timeToMinutes(startTime);
   const reqEnd = timeToMinutes(endTime);
 
   if (reqEnd <= reqStart) {
     return { available: false, reason: 'End time must be after start time.' };
   }
-
-  // Each existing booking occupies: [booking start, booking end + buffer)
-  // A new booking is unavailable if its time range overlaps ANY existing blocked range.
-  // Two intervals [a, b) and [c, d) overlap when a < d && b > c.
-  // Here: a=reqStart, b=reqEnd, c=bStart, d=bBlockEnd (end + buffer)
 
   for (const b of bookings) {
     if (b['Booking Status'] === 'Cancelled') continue;
@@ -299,33 +296,24 @@ export function checkAvailability(
 
     const bStart = timeToMinutes(b['Start Time']);
     const bEnd = timeToMinutes(b['End Time']);
-    const bBlockEnd = bEnd + buffer; // existing booking's full blocked range
+    const bBlockEnd = bEnd + buffer;
 
-    // This single check catches ALL overlap scenarios:
-    // - New booking overlaps existing event
-    // - New booking overlaps existing cleaning buffer
-    // - New booking is entirely inside existing buffer
-    // - New booking straddles event and buffer
     if (reqStart < bBlockEnd && reqEnd > bStart) {
       const slotType = reqStart >= bEnd ? 'cleaning buffer' : 'booking';
       return {
         available: false,
         reason: `Hall is unavailable from ${minutesToTime(bStart)} to ${minutesToTime(bBlockEnd)} ` +
                 `(existing ${slotType}: ${b['Event Name']}, ${b['Booking ID']}). ` +
-                `The ${buffer}-min cleaning buffer ends at ${minutesToTime(bBlockEnd)}. ` +
                 `Please select a time slot from ${minutesToTime(bBlockEnd)} onwards.`,
       };
     }
 
-    // Extra safety: check if the new booking's OWN buffer would collide.
-    // This handles the case where a new booking ends right before an existing booking,
-    // but its 2-hour buffer extends into the existing booking.
     const reqBlockEnd = reqEnd + buffer;
     if (reqBlockEnd > bStart && reqEnd <= bStart) {
       return {
         available: false,
-        reason: `Your event would end at ${minutesToTime(reqEnd)}, but the ${buffer}-min ` +
-                `cleaning buffer extends to ${minutesToTime(reqBlockEnd)}, which conflicts ` +
+        reason: `Your event would end at ${minutesToTime(reqEnd)}, but the cleaning ` +
+                `buffer extends to ${minutesToTime(reqBlockEnd)}, which conflicts ` +
                 `with "${b['Event Name']}" starting at ${minutesToTime(bStart)} (${b['Booking ID']}). ` +
                 `Please end your event by ${minutesToTime(bStart - buffer)} at the latest.`,
       };
