@@ -398,7 +398,7 @@ export default function Home() {
                 <div className="form-section-title">🎉 Event Information</div>
                 <div className="form-group"><label>Event Name <span className="req">*</span></label><input value={form.eventName} onChange={(e) => handleFormChange('eventName', e.target.value)} placeholder="e.g. Marriage Reception" /></div>
                 <div className="form-group"><label>Event Date <span className="req">*</span></label><input type="date" min={today} value={form.eventDate} onChange={(e) => handleFormChange('eventDate', e.target.value)} /></div>
-                <div className="form-group"><label>Time Slot <span className="req">*</span></label><select value={`${form.startTime}|${form.endTime}`} onChange={(e) => { const [s, en] = e.target.value.split('|'); setForm((f) => ({ ...f, startTime: s, endTime: en })); }}><option value="">Select a time slot</option>{TIME_SLOTS.map((ts) => (<option key={ts.start} value={`${ts.start}|${ts.end}`}>{ts.label}</option>))}</select></div>
+                <div className="form-group"><label>Time Slot <span className="req">*</span></label><div className="slot-bubbles">{TIME_SLOTS.map((ts) => { const isSelected = form.startTime === ts.start && form.endTime === ts.end; return (<div key={ts.start} className={`slot-bubble${isSelected ? ' selected' : ''}`} onClick={() => setForm((f) => ({ ...f, startTime: ts.start, endTime: ts.end }))}><div className="slot-bubble-label">{ts.label.split('(')[0].trim()}</div><div className="slot-bubble-time">{ts.start} – {ts.end}</div><div className="slot-bubble-check">✓ Selected</div></div>); })}</div></div>
 
                 <div className="form-section-title">💳 Payment Information</div>
                 <div className="form-group"><label>Total Amount (₹) <span className="req">*</span></label><input type="number" min="0" step="0.01" value={form.totalAmount} onChange={(e) => handleFormChange('totalAmount', e.target.value)} placeholder="0.00" /></div>
@@ -439,8 +439,8 @@ export default function Home() {
                   ))}
                 </div>
                 <div className="btn-group" style={{ justifyContent: 'center' }}>
-                  <button className="btn btn-gold" onClick={() => { setSuccessBooking(null); resetForm(); }}>➕ New Booking</button>
-                  <button className="btn btn-outline" onClick={() => setTab('today')}>📋 View Today</button>
+                  <button className="btn btn-gold" onClick={() => { setSuccessBooking(null); resetForm(); setTab('new-booking'); }}>➕ New Booking</button>
+                  <button className="btn btn-primary" onClick={() => { setSuccessBooking(null); resetForm(); setTab('dashboard'); }}>📊 Back to Dashboard</button>
                 </div>
               </div>
             </div>
@@ -481,50 +481,32 @@ export default function Home() {
               ) : !selectedDate ? (
                 <div className="empty-state"><div className="icon">📅</div><h3>Select a date</h3><p>Click any day on the calendar to see available slots.</p></div>
               ) : (
-                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 8 }}>
+                <div className="slot-bubbles-row">
                   {TIME_SLOTS.map((ts) => {
                     const booking = daySlots.find((s) => s.type === 'booked' && s.start === ts.start && s.end === ts.end);
                     const isBooked = !!booking;
                     return (
                       <div key={ts.start}
-                        onClick={() => !isBooked && goToNewBooking(selectedDate, ts.start, ts.end)}
-                        style={{
-                          flex: '1 1 200px',
-                          maxWidth: 320,
-                          padding: '20px 24px',
-                          borderRadius: 14,
-                          background: isBooked ? '#2a2a3e' : 'linear-gradient(135deg, #1a4d2e 0%, #0d7a42 100%)',
-                          border: isBooked ? '2px solid #555' : '2px solid #2dd47b',
-                          cursor: isBooked ? 'not-allowed' : 'pointer',
-                          opacity: isBooked ? 0.7 : 1,
-                          transition: 'all 0.2s ease',
-                          position: 'relative',
-                          overflow: 'hidden',
-                        }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1.5, color: isBooked ? '#999' : '#6ee7a8', marginBottom: 6 }}>
-                          {ts.label.split('(')[0].trim()}
-                        </div>
-                        <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', marginBottom: 4 }}>
-                          {ts.start} – {ts.end}
-                        </div>
+                        className={`cal-slot ${isBooked ? 'booked' : 'available'}`}
+                        onClick={() => !isBooked && goToNewBooking(selectedDate, ts.start, ts.end)}>
+                        <div className="cal-slot-period">{ts.label.split('(')[0].trim()}</div>
+                        <div className="cal-slot-time">{ts.start} – {ts.end}</div>
                         {isBooked ? (
                           <>
-                            <div style={{ fontSize: 13, fontWeight: 700, color: '#e74c3c', marginTop: 8 }}>🔴 BOOKED</div>
-                            <div style={{ fontSize: 12, color: '#ccc', marginTop: 6 }}>
+                            <div className="cal-slot-status">🔴 BOOKED</div>
+                            <div className="cal-slot-details">
                               <strong>{esc(booking!.event || '')}</strong>
                               <br />{esc(booking!.client || '')}
-                              <br /><span style={{ fontSize: 11, color: '#999' }}>{booking!.bookingId} · ₹{fmtN(booking!.total || 0)}</span>
+                              <br />{booking!.bookingId} · ₹{fmtN(booking!.total || 0)}
                               {booking!.paymentStatus && (
-                                <span style={{ display: 'inline-block', fontSize: 10, padding: '1px 6px', borderRadius: 8, background: booking!.paymentStatus === 'Paid' ? '#27ae60' : booking!.paymentStatus === 'Partially Paid' ? '#f39c12' : '#e74c3c', color: '#fff', fontWeight: 700, marginLeft: 6 }}>{booking!.paymentStatus}</span>
+                                <span style={{ display: 'inline-block', fontSize: 10, padding: '1px 8px', borderRadius: 8, background: booking!.paymentStatus === 'Paid' ? '#22c55e' : booking!.paymentStatus === 'Partially Paid' ? '#f59e0b' : '#ef4444', color: '#fff', fontWeight: 700, marginLeft: 6 }}>{booking!.paymentStatus}</span>
                               )}
                             </div>
                           </>
                         ) : (
                           <>
-                            <div style={{ fontSize: 13, fontWeight: 700, color: '#6ee7a8', marginTop: 8 }}>✅ AVAILABLE</div>
-                            <div style={{ fontSize: 12, color: '#aaffcc', marginTop: 4 }}>
-                              Click to book this slot →
-                            </div>
+                            <div className="cal-slot-status">✅ AVAILABLE</div>
+                            <div className="cal-slot-details">Click to book this slot →</div>
                           </>
                         )}
                       </div>
