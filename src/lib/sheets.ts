@@ -348,12 +348,12 @@ export function generateBookingId(bookings: Booking[], dateStr: string): string 
   const yy = String(d.getFullYear()).slice(2);
   const mm = String(d.getMonth() + 1).padStart(2, '0');
   const dd = String(d.getDate()).padStart(2, '0');
-  const prefix = `RA${yy}${mm}${dd}`;
+  const prefix = `RA${yy}${mm}`;
 
   let seq = 0;
   for (const b of bookings) {
     if (String(b['Booking ID']).startsWith(prefix)) seq++;
   }
 
-  return `RA${yy}${String(seq + 1).padStart(3, '0')}`;
+  return `RA${yy}${mm}${String(seq + 1).padStart(3, '0')}`;
 }
