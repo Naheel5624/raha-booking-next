@@ -185,6 +185,8 @@ export default function Home() {
   const [cancelInfo, setCancelInfo] = useState({ event: '', client: '' });
   const [payModal, setPayModal] = useState<{ id: string; total: number; paid: number } | null>(null);
   const [payAmount, setPayAmount] = useState('');
+  const [editModal, setEditModal] = useState<{ id: string; currentTotal: number } | null>(null);
+  const [editTotal, setEditTotal] = useState('');
 
   const today = localDateStr();
 
@@ -351,7 +353,33 @@ export default function Home() {
       const msg = e instanceof Error ? e.message : 'Error';
       alert('❌ ' + msg);
     }
-  };    const goToNewBooking = (date: string, start: string, end: string) => {
+  };
+
+  const updateTotalAmount = async () => {
+    if (!editModal) return;
+    const newTotal = parseFloat(editTotal);
+    if (isNaN(newTotal) || newTotal < 0) { alert('Enter a valid amount.'); return; }
+    try {
+      const res = await fetch('/api/bookings/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId: editModal.id, totalAmount: newTotal }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setEditModal(null);
+        fetchBookings();
+        alert('✅ ' + data.message);
+      } else {
+        alert('❌ ' + (data.errors?.join('\n') || 'Failed'));
+      }
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : 'Error';
+      alert('❌ ' + msg);
+    }
+  };
+
+  const goToNewBooking = (date: string, start: string, end: string) => {
     // Find matching slot or default
     const match = TIME_SLOTS.find((ts) => ts.start === start && ts.end === end);
     setForm((f) => ({ ...f, eventDate: date, startTime: match ? match.start : start, endTime: match ? match.end : end }));
@@ -396,6 +424,7 @@ export default function Home() {
                       {b['Booking Status'] !== 'Cancelled' && (
                         <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
                           <button className="btn btn-outline btn-sm" onClick={() => printReceipt(b as unknown as Record<string, string | number>)} title="Print Receipt">🖨️</button>
+                          <button className="btn btn-outline btn-sm" onClick={() => { setEditModal({ id: b['Booking ID'], currentTotal: b['Total Amount'] }); setEditTotal(String(b['Total Amount'])); }} title="Edit Total">✏️</button>
                           <button className="btn btn-outline btn-sm" onClick={() => { setPayModal({ id: b['Booking ID'], total: b['Total Amount'], paid: b['Amount Paid'] }); setPayAmount(''); }}>💳</button>{' '}
                           <button className="btn btn-danger btn-sm" onClick={() => { setCancelId(b['Booking ID']); setCancelInfo({ event: b['Event Name'], client: b['Client Name'] }); }}>✕</button>
                         </div>
@@ -771,6 +800,30 @@ export default function Home() {
                 <div className="btn-group" style={{ marginTop: 16 }}>
                   <button className="btn btn-success" onClick={updatePayment}>💾 Save Payment</button>
                   <button className="btn btn-outline" onClick={() => setPayModal(null)}>Cancel</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* EDIT TOTAL MODAL */}
+      <div className={`modal-overlay${editModal ? ' show' : ''}`} onClick={() => setEditModal(null)}>
+        <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-header"><h3>✏️ Edit Total Amount</h3><button className="modal-close" onClick={() => setEditModal(null)}>✕</button></div>
+          <div className="modal-body">
+            {editModal && (
+              <>
+                <div style={{ background: 'var(--bg)', padding: 14, borderRadius: 8, fontSize: 13, marginBottom: 16, border: '1px solid var(--border-light)' }}>
+                  <strong>ID:</strong> {editModal.id}<br /><strong>Current Total:</strong> ₹{fmtN(editModal.currentTotal)}
+                </div>
+                <div className="form-group" style={{ marginBottom: 16 }}>
+                  <label>New Total Amount (₹)</label>
+                  <input type="number" min="0" step="0.01" value={editTotal} onChange={(e) => setEditTotal(e.target.value)} />
+                </div>
+                <div className="btn-group" style={{ marginTop: 16 }}>
+                  <button className="btn btn-success" onClick={updateTotalAmount}>💾 Save</button>
+                  <button className="btn btn-outline" onClick={() => setEditModal(null)}>Cancel</button>
                 </div>
               </>
             )}
