@@ -32,6 +32,7 @@ interface TimeSlot {
   client?: string;
   bookingId?: string;
   hallType?: string;
+  bookingStatus?: string;
   paymentStatus?: string;
   total?: number;
   paid?: number;
@@ -565,12 +566,12 @@ export default function Home() {
                           <div className="cal-slot-time" style={{ fontSize: 18 }}>{ts.start} – {ts.end}</div>
                           {isBooked ? (
                             <>
-                              <div className="cal-slot-status">🔴 BOOKED</div>
+                              <div className="cal-slot-status">{booking['Booking Status'] === 'Pending' ? '⚠️ PENDING' : '🔴 BOOKED'}</div>
                               <div className="cal-slot-details">
                                 <strong>{esc(booking['Event Name'])}</strong> — {esc(booking['Client Name'])}
                                 <br />{booking['Hall Type'] || 'Main Hall'} · {booking['Booking ID']} · ₹{fmtN(booking['Total Amount'])}
                                 {booking['Payment Status'] && (
-                                  <span style={{ display: 'inline-block', fontSize: 10, padding: '1px 8px', borderRadius: 8, background: booking['Payment Status'] === 'Paid' ? '#22c55e' : booking['Payment Status'] === 'Partially Paid' ? '#f59e0b' : '#ef4444', color: '#fff', fontWeight: 700, marginLeft: 6 }}>{booking['Payment Status']}</span>
+                                  <span style={{ display: 'inline-block', fontSize: 10, padding: '1px 8px', borderRadius: 8, background: booking['Booking Status'] === 'Pending' ? '#F59E0B' : booking['Payment Status'] === 'Paid' ? '#22c55e' : booking['Payment Status'] === 'Partially Paid' ? '#f59e0b' : '#ef4444', color: '#fff', fontWeight: 700, marginLeft: 6 }}>{booking['Booking Status'] === 'Pending' ? 'Pending' : booking['Payment Status']}</span>
                                 )}
                               </div>
                             </>
@@ -739,13 +740,13 @@ export default function Home() {
                         <div className="cal-slot-time">{ts.start} – {ts.end}</div>
                         {isBooked ? (
                           <>
-                            <div className="cal-slot-status">🔴 BOOKED</div>
+                            <div className="cal-slot-status">{booking!.bookingStatus === 'Pending' ? '⚠️ PENDING' : '🔴 BOOKED'}</div>
                             <div className="cal-slot-details">
                               <strong>{esc(booking!.event || '')}</strong>
                               <br />{esc(booking!.client || '')}
                               <br />{booking!.hallType || "Main Hall"} · {booking!.bookingId} · ₹{fmtN(booking!.total || 0)}
                               {booking!.paymentStatus && (
-                                <span style={{ display: 'inline-block', fontSize: 10, padding: '1px 8px', borderRadius: 8, background: booking!.paymentStatus === 'Paid' ? '#22c55e' : booking!.paymentStatus === 'Partially Paid' ? '#f59e0b' : '#ef4444', color: '#fff', fontWeight: 700, marginLeft: 6 }}>{booking!.paymentStatus}</span>
+                                <span style={{ display: 'inline-block', fontSize: 10, padding: '1px 8px', borderRadius: 8, background: booking!.bookingStatus === 'Pending' ? '#F59E0B' : booking!.paymentStatus === 'Paid' ? '#22c55e' : booking!.paymentStatus === 'Partially Paid' ? '#f59e0b' : '#ef4444', color: '#fff', fontWeight: 700, marginLeft: 6 }}>{booking!.bookingStatus === 'Pending' ? 'Pending' : booking!.paymentStatus}</span>
                               )}
                             </div>
                           </>

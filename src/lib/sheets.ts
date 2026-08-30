@@ -241,6 +241,7 @@ export interface TimeSlot {
   client?: string;
   bookingId?: string;
   hallType?: string;
+  bookingStatus?: string;
   paymentStatus?: string;
   total?: number;
   paid?: number;
@@ -277,6 +278,7 @@ export function buildTimeline(bookings: Booking[], dateStr: string): TimeSlot[] 
       client: b['Client Name'],
       bookingId: b['Booking ID'],
       hallType: b['Hall Type'] || 'Main Hall',
+      bookingStatus: b['Booking Status'],
       paymentStatus: b['Payment Status'],
       total: b['Total Amount'],
       paid: b['Amount Paid'],
@@ -322,21 +324,25 @@ export function checkAvailability(
 
     if (reqStart < bBlockEnd && reqEnd > bStart) {
       const slotType = reqStart >= bEnd ? 'cleaning buffer' : 'booking';
+      const statusTag = b['Booking Status'] === 'Pending' ? '⚠️ PENDING — ' : '';
       return {
         available: false,
-        reason: `Hall is unavailable from ${minutesToTime(bStart)} to ${minutesToTime(bBlockEnd)} ` +
+        reason: `${statusTag}Hall is unavailable from ${minutesToTime(bStart)} to ${minutesToTime(bBlockEnd)} ` +
                 `(existing ${slotType}: ${b['Event Name']}, ${b['Booking ID']}). ` +
+                `${b['Booking Status'] === 'Pending' ? 'This booking has no advance payment yet. ' : ''}` +
                 `Please select a time slot from ${minutesToTime(bBlockEnd)} onwards.`,
       };
     }
 
     const reqBlockEnd = reqEnd + buffer;
     if (reqBlockEnd > bStart && reqEnd <= bStart) {
+      const statusTag = b['Booking Status'] === 'Pending' ? '⚠️ PENDING — ' : '';
       return {
         available: false,
-        reason: `Your event would end at ${minutesToTime(reqEnd)}, but the cleaning ` +
+        reason: `${statusTag}Your event would end at ${minutesToTime(reqEnd)}, but the cleaning ` +
                 `buffer extends to ${minutesToTime(reqBlockEnd)}, which conflicts ` +
                 `with "${b['Event Name']}" starting at ${minutesToTime(bStart)} (${b['Booking ID']}). ` +
+                `${b['Booking Status'] === 'Pending' ? 'This booking has no advance payment yet. ' : ''}` +
                 `Please end your event by ${minutesToTime(bStart - buffer)} at the latest.`,
       };
     }
