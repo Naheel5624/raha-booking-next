@@ -210,6 +210,19 @@ h1, h2, h3, h4 {
   min-height: 46px; display: flex; align-items: center;
 }
 
+
+.slot-bubble.compact {
+  padding: 14px 18px;
+}
+
+.slot-bubble.compact .slot-bubble-time {
+  font-size: 15px;
+}
+
+.slot-bubble.compact .slot-bubble-label {
+  font-size: 12px;
+}
+
 /* TIME SLOT BUBBLES (form) */
 .slot-bubbles { display: flex; gap: 14px; flex-wrap: wrap; }
 
