@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const {
-      clientName, clientEmail, contactPhone,
+      clientName, clientEmail, contactPhone, secondaryContact,
       eventName, eventDate, startTime, endTime, hallType,
       totalAmount, amountPaid, bookingNotes,
     } = body;
@@ -35,6 +35,16 @@ export async function POST(req: NextRequest) {
     const errors: string[] = [];
     if (!clientName?.trim()) errors.push('Client Name is required.');
     if (!contactPhone?.trim()) errors.push('Contact Phone is required.');
+    if (!secondaryContact?.trim()) errors.push('Secondary Contact is required.');
+
+    // Phone validation: exactly 10 digits, no country code
+    const phoneRegex = /^\d{10}$/;
+    if (contactPhone?.trim() && !phoneRegex.test(contactPhone.trim().replace(/[^\d]/g, ''))) {
+      errors.push('Contact Phone must be exactly 10 digits (no country code).');
+    }
+    if (secondaryContact?.trim() && !phoneRegex.test(secondaryContact.trim().replace(/[^\d]/g, ''))) {
+      errors.push('Secondary Contact must be exactly 10 digits (no country code).');
+    }
     if (!eventName?.trim()) errors.push('Event Name is required.');
     if (!eventDate) errors.push('Event Date is required.');
     if (!hallType || !['Main Hall', 'Mini Hall'].includes(hallType)) errors.push('Hall Type is required (Main Hall or Mini Hall).');
@@ -72,6 +82,8 @@ export async function POST(req: NextRequest) {
     if (balance <= 0) paymentStatus = 'Paid';
     else if (paid > 0) paymentStatus = 'Partially Paid';
 
+    const bookingStatus = paid === 0 ? 'Pending' : 'Confirmed';
+
     // Validate time slots — only 2 allowed slots
     const ALLOWED_SLOTS = [
       { start: '10:00 AM', end: '02:00 PM' },
@@ -103,8 +115,9 @@ export async function POST(req: NextRequest) {
       'Event Name': eventName.trim(),
       'Hall Type': hallType,
       'Client Name': clientName.trim(),
-      'Client Email': (clientEmail || '').trim(),
       'Contact Phone': contactPhone.trim(),
+      'Secondary Contact': secondaryContact.trim(),
+      'Client Email': (clientEmail || '').trim(),
       'Date': eventDate,
       'Start Time': startTime,
       'End Time': endTime,
@@ -112,7 +125,7 @@ export async function POST(req: NextRequest) {
       'Amount Paid': paid,
       'Balance Due': balance,
       'Payment Status': paymentStatus,
-      'Booking Status': 'Confirmed',
+      'Booking Status': bookingStatus,
       'Booking Notes': (bookingNotes || '').trim(),
       'Created At': now,
     };

@@ -4,8 +4,9 @@ const SPREADSHEET_ID = (process.env.GOOGLE_SPREADSHEET_ID || '').trim();
 const SHEET_NAME = 'Bookings';
 
 const HEADERS = [
-  'Booking ID', 'Event Name', 'Client Name', 'Client Email',
-  'Contact Phone', 'Date', 'Start Time', 'End Time',
+  'Booking ID', 'Event Name', 'Client Name', 'Contact Phone',
+  'Secondary Contact', 'Client Email',
+  'Date', 'Start Time', 'End Time',
   'Total Amount', 'Amount Paid', 'Balance Due', 'Payment Status',
   'Booking Status', 'Hall Type',
   'Booking Notes', 'Created At'
@@ -60,7 +61,7 @@ async function getSheet() {
     // Write headers
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A1:Q1`,
+      range: `${SHEET_NAME}!A1:R1`,
       valueInputOption: 'RAW',
       requestBody: { values: [HEADERS] },
     });
@@ -100,8 +101,9 @@ export interface Booking {
   'Booking ID': string;
   'Event Name': string;
   'Client Name': string;
-  'Client Email': string;
   'Contact Phone': string;
+  'Secondary Contact': string;
+  'Client Email': string;
   'Date': string;
   'Start Time': string;
   'End Time': string;
@@ -125,7 +127,7 @@ export async function getAllBookings(): Promise<Booking[]> {
     const sheets = await getSheet();
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A2:Q`,
+      range: `${SHEET_NAME}!A2:R`,
     });
 
     const rows = res.data.values || [];
@@ -154,7 +156,7 @@ export async function appendBooking(booking: Booking): Promise<void> {
   const row = HEADERS.map((h) => booking[h as keyof Booking] ?? '');
   await sheets.spreadsheets.values.append({
     spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_NAME}!A:Q`,
+    range: `${SHEET_NAME}!A:R`,
     valueInputOption: 'USER_ENTERED',
     requestBody: { values: [row] },
   });

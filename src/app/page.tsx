@@ -6,8 +6,9 @@ interface Booking {
   'Booking ID': string;
   'Event Name': string;
   'Client Name': string;
-  'Client Email': string;
   'Contact Phone': string;
+  'Secondary Contact': string;
+  'Client Email': string;
   'Date': string;
   'Start Time': string;
   'End Time': string;
@@ -57,7 +58,7 @@ export default function Home() {
 
   // Form state
   const [form, setForm] = useState({
-    clientName: '', clientEmail: '', contactPhone: '',
+    clientName: '', clientEmail: '', contactPhone: '', secondaryContact: '',
     eventName: '', eventDate: '', startTime: '', endTime: '', hallType: '',
     totalAmount: '', amountPaid: '', bookingNotes: '',
   });
@@ -155,6 +156,11 @@ export default function Home() {
     setAlertMsg(null);
     if (!form.clientName.trim()) { setAlertMsg({ type: 'error', msg: 'Client Name is required.' }); return; }
     if (!form.contactPhone.trim()) { setAlertMsg({ type: 'error', msg: 'Contact Phone is required.' }); return; }
+    if (!form.secondaryContact.trim()) { setAlertMsg({ type: 'error', msg: 'Secondary Contact is required.' }); return; }
+    const phoneClean = form.contactPhone.replace(/[^\d]/g, '');
+    if (phoneClean.length !== 10) { setAlertMsg({ type: 'error', msg: 'Contact Phone must be exactly 10 digits (no country code).' }); return; }
+    const secClean = form.secondaryContact.replace(/[^\d]/g, '');
+    if (secClean.length !== 10) { setAlertMsg({ type: 'error', msg: 'Secondary Contact must be exactly 10 digits (no country code).' }); return; }
     if (!form.eventName.trim()) { setAlertMsg({ type: 'error', msg: 'Event Name is required.' }); return; }
     if (!form.hallType) { setAlertMsg({ type: 'error', msg: 'Please select a Hall Type.' }); return; }
     if (!form.eventDate) { setAlertMsg({ type: 'error', msg: 'Event Date is required.' }); return; }
@@ -246,7 +252,7 @@ export default function Home() {
   };
 
   const resetForm = () => {
-    setForm({ clientName: '', clientEmail: '', contactPhone: '', eventName: '', eventDate: today, startTime: '', endTime: '', hallType: '', totalAmount: '', amountPaid: '', bookingNotes: '' });
+    setForm({ clientName: '', clientEmail: '', contactPhone: '', secondaryContact: '', eventName: '', eventDate: today, startTime: '', endTime: '', hallType: '', totalAmount: '', amountPaid: '', bookingNotes: '' });
     setAlertMsg(null);
   };
 
@@ -478,7 +484,8 @@ export default function Home() {
               <div className="form-grid">
                 <div className="form-section-title">👤 Client Information</div>
                 <div className="form-group"><label>Client Name <span className="req">*</span></label><input value={form.clientName} onChange={(e) => handleFormChange('clientName', e.target.value)} placeholder="e.g. Ahmed Ali" /></div>
-                <div className="form-group"><label>Contact Phone <span className="req">*</span></label><input value={form.contactPhone} onChange={(e) => handleFormChange('contactPhone', e.target.value)} placeholder="e.g. +971 50 123 4567" /></div>
+                <div className="form-group"><label>Contact Phone <span className="req">*</span></label><input value={form.contactPhone} onChange={(e) => handleFormChange('contactPhone', e.target.value)} placeholder="10-digit number" maxLength={10} pattern="\d{10}" inputMode="numeric" /></div>
+                <div className="form-group"><label>Secondary Contact <span className="req">*</span></label><input value={form.secondaryContact} onChange={(e) => handleFormChange('secondaryContact', e.target.value)} placeholder="10-digit number" maxLength={10} pattern="\d{10}" inputMode="numeric" /></div>
                 <div className="form-group"><label>Client Email</label><input type="email" value={form.clientEmail} onChange={(e) => handleFormChange('clientEmail', e.target.value)} placeholder="e.g. client@example.com" /></div>
 
                 <div className="form-section-title">🎉 Event Information</div>
@@ -524,7 +531,7 @@ export default function Home() {
                 <div className="booking-id-display">{successBooking['Booking ID']}</div>
                 <div className="booking-summary">
                   {[
-                    ['Client', successBooking['Client Name']], ['Event', successBooking['Event Name']],
+                    ['Client', successBooking['Client Name']], ['Phone', successBooking['Contact Phone']], ['Secondary', successBooking['Secondary Contact']], ['Event', successBooking['Event Name']],
                     ['Date', successBooking['Date']], ['Hall', successBooking['Hall Type'] || 'Main Hall'], ['Time', `${successBooking['Start Time']} – ${successBooking['End Time']}`],
                     ['Total', `₹${fmtN(successBooking['Total Amount'])}`], ['Paid', `₹${fmtN(successBooking['Amount Paid'])}`],
                     ['Balance', `₹${fmtN(successBooking['Balance Due'])}`], ['Payment', successBooking['Payment Status']],
