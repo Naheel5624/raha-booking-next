@@ -8,7 +8,7 @@ const HEADERS = [
   'Contact Phone', 'Date', 'Start Time', 'End Time',
   'Total Amount', 'Amount Paid', 'Balance Due', 'Payment Status',
   'Booking Status', 'Blocked Until', 'Calendar Event ID',
-  'Booking Notes', 'Created At'
+  'Hall Type', 'Booking Notes', 'Created At'
 ];
 
 function getAuth() {
@@ -66,6 +66,25 @@ async function getSheet() {
     });
   }
 
+  // Auto-migrate: add Hall Type column if missing
+  try {
+    const headerRes = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${SHEET_NAME}!A1:Z1`,
+    });
+    const existingHeaders = headerRes.data.values?.[0] || [];
+    if (!existingHeaders.includes('Hall Type')) {
+      const col = String.fromCharCode(64 + existingHeaders.length + 1);
+      await sheets.spreadsheets.values.update({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${SHEET_NAME}!${col}1`,
+        valueInputOption: 'RAW',
+        requestBody: { values: [[ 'Hall Type' ]] },
+      });
+    }
+  } catch (e) {
+    console.error('Migration check failed:', e);
+  }
   return sheets;
 }
 
@@ -92,6 +111,7 @@ export interface Booking {
   'Payment Status': string;
   'Booking Status': string;
   'Blocked Until': string;
+  'Hall Type': string;
   'Calendar Event ID': string;
   'Booking Notes': string;
   'Created At': string;
@@ -220,6 +240,7 @@ export interface TimeSlot {
   event?: string;
   client?: string;
   bookingId?: string;
+  hallType?: string;
   paymentStatus?: string;
   total?: number;
   paid?: number;
@@ -255,6 +276,7 @@ export function buildTimeline(bookings: Booking[], dateStr: string): TimeSlot[] 
       event: b['Event Name'],
       client: b['Client Name'],
       bookingId: b['Booking ID'],
+      hallType: b['Hall Type'] || 'Main Hall',
       paymentStatus: b['Payment Status'],
       total: b['Total Amount'],
       paid: b['Amount Paid'],

@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const {
       clientName, clientEmail, contactPhone,
-      eventName, eventDate, startTime, endTime,
+      eventName, eventDate, startTime, endTime, hallType,
       totalAmount, amountPaid, bookingNotes,
     } = body;
 
@@ -37,6 +37,7 @@ export async function POST(req: NextRequest) {
     if (!contactPhone?.trim()) errors.push('Contact Phone is required.');
     if (!eventName?.trim()) errors.push('Event Name is required.');
     if (!eventDate) errors.push('Event Date is required.');
+    if (!hallType || !['Main Hall', 'Mini Hall'].includes(hallType)) errors.push('Hall Type is required (Main Hall or Mini Hall).');
     if (!startTime) errors.push('Start Time is required.');
     if (!endTime) errors.push('End Time is required.');
     if (!totalAmount && totalAmount !== 0) errors.push('Total Amount is required.');
@@ -100,6 +101,7 @@ export async function POST(req: NextRequest) {
     const booking: Booking = {
       'Booking ID': bookingId,
       'Event Name': eventName.trim(),
+      'Hall Type': hallType,
       'Client Name': clientName.trim(),
       'Client Email': (clientEmail || '').trim(),
       'Contact Phone': contactPhone.trim(),

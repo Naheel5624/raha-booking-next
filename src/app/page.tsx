@@ -17,6 +17,7 @@ interface Booking {
   'Payment Status': string;
   'Booking Status': string;
   'Blocked Until': string;
+  'Hall Type': string;
   'Calendar Event ID': string;
   'Booking Notes': string;
   'Created At': string;
@@ -31,6 +32,7 @@ interface TimeSlot {
   event?: string;
   client?: string;
   bookingId?: string;
+  hallType?: string;
   paymentStatus?: string;
   total?: number;
   paid?: number;
@@ -58,7 +60,7 @@ export default function Home() {
   // Form state
   const [form, setForm] = useState({
     clientName: '', clientEmail: '', contactPhone: '',
-    eventName: '', eventDate: '', startTime: '', endTime: '',
+    eventName: '', eventDate: '', startTime: '', endTime: '', hallType: '',
     totalAmount: '', amountPaid: '', bookingNotes: '',
   });
   const [submitting, setSubmitting] = useState(false);
@@ -156,6 +158,7 @@ export default function Home() {
     if (!form.clientName.trim()) { setAlertMsg({ type: 'error', msg: 'Client Name is required.' }); return; }
     if (!form.contactPhone.trim()) { setAlertMsg({ type: 'error', msg: 'Contact Phone is required.' }); return; }
     if (!form.eventName.trim()) { setAlertMsg({ type: 'error', msg: 'Event Name is required.' }); return; }
+    if (!form.hallType) { setAlertMsg({ type: 'error', msg: 'Please select a Hall Type.' }); return; }
     if (!form.eventDate) { setAlertMsg({ type: 'error', msg: 'Event Date is required.' }); return; }
     if (!form.startTime) { setAlertMsg({ type: 'error', msg: 'Start Time is required.' }); return; }
     if (!form.endTime) { setAlertMsg({ type: 'error', msg: 'End Time is required.' }); return; }
@@ -237,7 +240,7 @@ export default function Home() {
   };
 
   const resetForm = () => {
-    setForm({ clientName: '', clientEmail: '', contactPhone: '', eventName: '', eventDate: today, startTime: '', endTime: '', totalAmount: '', amountPaid: '', bookingNotes: '' });
+    setForm({ clientName: '', clientEmail: '', contactPhone: '', eventName: '', eventDate: today, startTime: '', endTime: '', hallType: '', totalAmount: '', amountPaid: '', bookingNotes: '' });
     setAlertMsg(null);
   };
 
@@ -247,7 +250,7 @@ export default function Home() {
       <div className="table-wrapper">
         <table className="booking-table">
           <thead><tr>
-            <th>ID</th><th>Date</th><th>Event</th><th>Client</th><th>Time</th>
+            <th>ID</th><th>Date</th><th>Event</th><th>Hall</th><th>Client</th><th>Time</th>
             <th>Total</th><th>Paid</th><th>Balance</th><th>Payment</th><th>Status</th>
             {showActions && <th></th>}
           </tr></thead>
@@ -260,6 +263,7 @@ export default function Home() {
                   <td><strong>{b['Booking ID']}</strong></td>
                   <td>{b['Date']}</td>
                   <td>{esc(b['Event Name'])}</td>
+                  <td><span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 8, background: b['Hall Type'] === 'Mini Hall' ? '#f3e8ff' : '#dbeafe', color: b['Hall Type'] === 'Mini Hall' ? '#7c3aed' : '#2563eb', fontWeight: 700 }}>{b['Hall Type'] || 'Main Hall'}</span></td>
                   <td>{esc(b['Client Name'])}</td>
                   <td>{b['Start Time']} – {b['End Time']}</td>
                   <td>₹{fmtN(b['Total Amount'])}</td>
@@ -405,7 +409,7 @@ export default function Home() {
                               <div className="cal-slot-status">🔴 BOOKED</div>
                               <div className="cal-slot-details">
                                 <strong>{esc(booking['Event Name'])}</strong> — {esc(booking['Client Name'])}
-                                <br />{booking['Booking ID']} · ₹{fmtN(booking['Total Amount'])}
+                                <br />{booking['Hall Type'] || 'Main Hall'} · {booking['Booking ID']} · ₹{fmtN(booking['Total Amount'])}
                                 {booking['Payment Status'] && (
                                   <span style={{ display: 'inline-block', fontSize: 10, padding: '1px 8px', borderRadius: 8, background: booking['Payment Status'] === 'Paid' ? '#22c55e' : booking['Payment Status'] === 'Partially Paid' ? '#f59e0b' : '#ef4444', color: '#fff', fontWeight: 700, marginLeft: 6 }}>{booking['Payment Status']}</span>
                                 )}
@@ -440,7 +444,7 @@ export default function Home() {
                       </div>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{esc(b['Event Name'])}</div>
-                        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{esc(b['Client Name'])} · {b['Booking ID']}</div>
+                        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>{esc(b['Client Name'])} · {b['Hall Type'] || 'Main Hall'} · {b['Booking ID']}</div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
                         <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--primary)' }}>₹{fmtN(b['Total Amount'])}</div>
@@ -467,6 +471,7 @@ export default function Home() {
 
                 <div className="form-section-title">🎉 Event Information</div>
                 <div className="form-group"><label>Event Name <span className="req">*</span></label><input value={form.eventName} onChange={(e) => handleFormChange('eventName', e.target.value)} placeholder="e.g. Marriage Reception" /></div>
+                <div className="form-group"><label>Hall Type <span className="req">*</span></label><div className="slot-bubbles">{["Main Hall", "Mini Hall"].map((ht) => { const isSelected = form.hallType === ht; return (<div key={ht} className={`slot-bubble${isSelected ? " selected" : ""}`} onClick={() => setForm((f) => ({ ...f, hallType: ht }))}><div className="slot-bubble-label">{ht === "Main Hall" ? "🏛️" : "🏠"} {ht}</div><div className="slot-bubble-check">✓ Selected</div></div>); })}</div></div>
                 <div className="form-group"><label>Event Date <span className="req">*</span></label><input type="date" min={today} value={form.eventDate} onChange={(e) => handleFormChange('eventDate', e.target.value)} /></div>
                 <div className="form-group"><label>Time Slot <span className="req">*</span></label><div className="slot-bubbles">{TIME_SLOTS.map((ts) => { const isSelected = form.startTime === ts.start && form.endTime === ts.end; return (<div key={ts.start} className={`slot-bubble${isSelected ? ' selected' : ''}`} onClick={() => setForm((f) => ({ ...f, startTime: ts.start, endTime: ts.end }))}><div className="slot-bubble-label">{ts.label.split('(')[0].trim()}</div><div className="slot-bubble-time">{ts.start} – {ts.end}</div><div className="slot-bubble-check">✓ Selected</div></div>); })}</div></div>
 
@@ -501,7 +506,7 @@ export default function Home() {
                 <div className="booking-summary">
                   {[
                     ['Client', successBooking['Client Name']], ['Event', successBooking['Event Name']],
-                    ['Date', successBooking['Date']], ['Time', `${successBooking['Start Time']} – ${successBooking['End Time']}`],
+                    ['Date', successBooking['Date']], ['Hall', successBooking['Hall Type'] || 'Main Hall'], ['Time', `${successBooking['Start Time']} – ${successBooking['End Time']}`],
                     ['Total', `₹${fmtN(successBooking['Total Amount'])}`], ['Paid', `₹${fmtN(successBooking['Amount Paid'])}`],
                     ['Balance', `₹${fmtN(successBooking['Balance Due'])}`], ['Payment', successBooking['Payment Status']],
                   ].map(([l, v]) => (
@@ -567,7 +572,7 @@ export default function Home() {
                             <div className="cal-slot-details">
                               <strong>{esc(booking!.event || '')}</strong>
                               <br />{esc(booking!.client || '')}
-                              <br />{booking!.bookingId} · ₹{fmtN(booking!.total || 0)}
+                              <br />{booking!.hallType || "Main Hall"} · {booking!.bookingId} · ₹{fmtN(booking!.total || 0)}
                               {booking!.paymentStatus && (
                                 <span style={{ display: 'inline-block', fontSize: 10, padding: '1px 8px', borderRadius: 8, background: booking!.paymentStatus === 'Paid' ? '#22c55e' : booking!.paymentStatus === 'Partially Paid' ? '#f59e0b' : '#ef4444', color: '#fff', fontWeight: 700, marginLeft: 6 }}>{booking!.paymentStatus}</span>
                               )}
