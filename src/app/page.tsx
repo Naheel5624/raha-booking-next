@@ -162,6 +162,9 @@ export default function Home() {
     if (!form.endTime) { setAlertMsg({ type: 'error', msg: 'End Time is required.' }); return; }
     if (!form.totalAmount) { setAlertMsg({ type: 'error', msg: 'Total Amount is required.' }); return; }
     if (form.amountPaid === '') { setAlertMsg({ type: 'error', msg: 'Amount Paid is required.' }); return; }
+    const tAmt = parseFloat(form.totalAmount) || 0;
+    const aPaid = parseFloat(form.amountPaid) || 0;
+    if (aPaid > tAmt) { setAlertMsg({ type: 'error', msg: 'Amount Paid cannot exceed Total Amount.' }); return; }
 
     setSubmitting(true);
     try {
@@ -211,13 +214,15 @@ export default function Home() {
 
   const updatePayment = async () => {
     if (!payModal) return;
-    const amt = parseFloat(payAmount);
-    if (isNaN(amt) || amt < 0) { alert('Enter a valid amount.'); return; }
+    const additional = parseFloat(payAmount);
+    if (isNaN(additional) || additional < 0) { alert('Enter a valid amount.'); return; }
+    const totalPaid = payModal.paid + additional;
+    if (totalPaid > payModal.total) { alert('Payment cannot exceed the remaining balance.'); return; }
     try {
       const res = await fetch('/api/bookings/payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookingId: payModal.id, amountPaid: amt }),
+        body: JSON.stringify({ bookingId: payModal.id, amountPaid: totalPaid }),
       });
       const data = await res.json();
       if (data.success) {
@@ -275,7 +280,7 @@ export default function Home() {
                     <td>
                       {b['Booking Status'] !== 'Cancelled' && (
                         <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
-                          <button className="btn btn-outline btn-sm" onClick={() => { setPayModal({ id: b['Booking ID'], total: b['Total Amount'], paid: b['Amount Paid'] }); setPayAmount(String(b['Amount Paid'])); }}>💳</button>{' '}
+                          <button className="btn btn-outline btn-sm" onClick={() => { setPayModal({ id: b['Booking ID'], total: b['Total Amount'], paid: b['Amount Paid'] }); setPayAmount(''); }}>💳</button>{' '}
                           <button className="btn btn-danger btn-sm" onClick={() => { setCancelId(b['Booking ID']); setCancelInfo({ event: b['Event Name'], client: b['Client Name'] }); }}>✕</button>
                         </div>
                       )}
@@ -298,6 +303,10 @@ export default function Home() {
   const prevDays = new Date(calYear, calMonth, 0).getDate();
 
   const calCells: React.ReactNode[] = [];
+  // Day headers
+  for (let i = 0; i < 7; i++) {
+    calCells.push(<div key={`h${i}`} className="cal-header" style={{ background: 'var(--primary)', color: '#fff', padding: '10px', textAlign: 'center', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>{days[i]}</div>);
+  }
   // Prev month
   for (let i = firstDay - 1; i >= 0; i--) {
     calCells.push(<div key={`p${i}`} className="cal-day other-month"><div className="cal-day-num">{prevDays - i}</div></div>);
@@ -485,7 +494,7 @@ export default function Home() {
 
                 <div className="form-section-title">💳 Payment Information</div>
                 <div className="form-group"><label>Total Amount (₹) <span className="req">*</span></label><input type="number" min="0" step="0.01" value={form.totalAmount} onChange={(e) => handleFormChange('totalAmount', e.target.value)} placeholder="0.00" /></div>
-                <div className="form-group"><label>Amount Paid (₹) <span className="req">*</span></label><input type="number" min="0" step="0.01" value={form.amountPaid} onChange={(e) => handleFormChange('amountPaid', e.target.value)} placeholder="0.00" /></div>
+                <div className="form-group"><label>Amount Paid (₹) <span className="req">*</span></label><input type="number" min="0" step="0.01" max={form.totalAmount || undefined} value={form.amountPaid} onChange={(e) => { const val = e.target.value; const t = parseFloat(form.totalAmount) || 0; const v = parseFloat(val); if (t > 0 && v > t) { handleFormChange('amountPaid', String(t)); } else { handleFormChange('amountPaid', val); } }} placeholder="0.00" /></div>
                 <div className="form-group"><label>Balance Due (₹)</label><div className="computed-field">₹{fmtN(balance)}</div></div>
                 <div className="form-group"><label>Payment Status</label><div className="computed-field">{payStatus}</div></div>
 
@@ -628,15 +637,15 @@ export default function Home() {
             {payModal && (
               <>
                 <div style={{ background: 'var(--bg)', padding: 14, borderRadius: 8, fontSize: 13, marginBottom: 16, border: '1px solid var(--border-light)' }}>
-                  <strong>ID:</strong> {payModal.id}<br /><strong>Total:</strong> ₹{fmtN(payModal.total)}<br /><strong>Currently Paid:</strong> ₹{fmtN(payModal.paid)}
+                  <strong>ID:</strong> {payModal.id}<br /><strong>Total:</strong> ₹{fmtN(payModal.total)}<br /><strong>Already Paid:</strong> ₹{fmtN(payModal.paid)}<br /><strong>Remaining:</strong> ₹{fmtN(payModal.total - payModal.paid)}
                 </div>
                 <div className="form-group" style={{ marginBottom: 16 }}>
-                  <label>Amount Paid (₹)</label>
-                  <input type="number" min="0" max={payModal.total} step="0.01" value={payAmount} onChange={(e) => setPayAmount(e.target.value)} />
+                  <label>Additional Payment (₹)</label>
+                  <input type="number" min="0" max={payModal.total - payModal.paid} step="0.01" value={payAmount} onChange={(e) => { const v = parseFloat(e.target.value); const rem = payModal.total - payModal.paid; if (v > rem) { setPayAmount(String(rem)); } else { setPayAmount(e.target.value); } }} placeholder="Enter amount to pay" />
                 </div>
                 <div className="form-group">
-                  <label>New Balance</label>
-                  <div className="computed-field">₹{fmtN(payModal.total - (parseFloat(payAmount) || 0))}</div>
+                  <label>New Balance After Payment</label>
+                  <div className="computed-field">₹{fmtN(payModal.total - payModal.paid - (parseFloat(payAmount) || 0))}</div>
                 </div>
                 <div className="btn-group" style={{ marginTop: 16 }}>
                   <button className="btn btn-success" onClick={updatePayment}>💾 Save Payment</button>
