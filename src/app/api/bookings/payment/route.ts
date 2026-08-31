@@ -33,8 +33,6 @@ export async function POST(req: NextRequest) {
     await updateBookingField(bookingId, 'Amount Paid', paid);
     await updateBookingField(bookingId, 'Balance Due', balance);
     await updateBookingField(bookingId, 'Payment Status', paymentStatus);
-    if (paymentDate) await updateBookingField(bookingId, 'Payment Date', paymentDate);
-    if (paymentMethod) await updateBookingField(bookingId, 'Payment Method', paymentMethod);
 
     // Auto-confirm booking when any payment is made
     if (paid > 0 && booking['Booking Status'] === 'Pending') {

@@ -18,8 +18,6 @@ interface Booking {
   'Payment Status': string;
   'Booking Status': string;
   'Hall Type': string;
-  'Payment Date': string;
-  'Payment Method': string;
   'Booking Notes': string;
   'Created At': string;
 }
@@ -55,7 +53,7 @@ function fmtDate(d: string) {
   return d;
 }
 
-function printReceipt(b: Record<string, string | number>) {
+function printReceipt(b: Record<string, string | number>, extraPayDate?: string, extraPayMethod?: string) {
   const id = b['Booking ID'];
   const clientName = b['Client Name'];
   const phone = b['Contact Phone'];
@@ -73,8 +71,8 @@ function printReceipt(b: Record<string, string | number>) {
   const bookStatus = b['Booking Status'];
   const notes = b['Booking Notes'] || '';
   const dateFormatted = fmtDate(date as string);
-  const payDate = b['Payment Date'] ? fmtDate(b['Payment Date'] as string) : '';
-  const payMethod = b['Payment Method'] || '';
+  const payDate = extraPayDate || (b['Payment Date'] ? fmtDate(b['Payment Date'] as string) : '');
+  const payMethod = extraPayMethod || (b['Payment Method'] as string) || '';
 
   const html = `<!DOCTYPE html>
 <html><head><meta charset="UTF-8"><title>Receipt - ${id}</title>
@@ -204,6 +202,7 @@ export default function Home() {
   const [payMethod, setPayMethod] = useState('Cash');
   const [editModal, setEditModal] = useState<{ id: string; currentTotal: number } | null>(null);
   const [editTotal, setEditTotal] = useState('');
+  const [lastPaymentInfo, setLastPaymentInfo] = useState<{ bookingId: string; date: string; method: string } | null>(null);
 
   const today = localDateStr();
 
@@ -361,6 +360,7 @@ export default function Home() {
       const data = await res.json();
       if (data.success) {
         setPayModal(null);
+        setLastPaymentInfo({ bookingId: payModal.id, date: payDate, method: payMethod });
         fetchBookings();
         alert('✅ ' + data.message);
       } else {
@@ -440,7 +440,7 @@ export default function Home() {
                     <td>
                       {b['Booking Status'] !== 'Cancelled' && (
                         <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
-                          <button className="btn btn-outline btn-sm" onClick={() => printReceipt(b as unknown as Record<string, string | number>)} title="Print Receipt">🖨️</button>
+                          <button className="btn btn-outline btn-sm" onClick={() => { const lp = lastPaymentInfo?.bookingId === b['Booking ID'] ? lastPaymentInfo : undefined; printReceipt(b as unknown as Record<string, string | number>, lp?.date, lp?.method); }} title="Print Receipt">🖨️</button>
                           <button className="btn btn-outline btn-sm" onClick={() => { setEditModal({ id: b['Booking ID'], currentTotal: b['Total Amount'] }); setEditTotal(String(b['Total Amount'])); }} title="Edit Total">✏️</button>
                           <button className="btn btn-outline btn-sm" onClick={() => { setPayModal({ id: b['Booking ID'], total: b['Total Amount'], paid: b['Amount Paid'] }); setPayAmount(''); setPayDate(localDateStr()); setPayMethod('Cash'); }}>💳</button>{' '}
                           <button className="btn btn-danger btn-sm" onClick={() => { setCancelId(b['Booking ID']); setCancelInfo({ event: b['Event Name'], client: b['Client Name'] }); }}>✕</button>
@@ -698,7 +698,7 @@ export default function Home() {
                   ))}
                 </div>
                 <div className="btn-group" style={{ justifyContent: 'center' }}>
-                  <button className="btn btn-gold" onClick={() => printReceipt(successBooking as unknown as Record<string, string | number>)}>🖨️ Print Receipt</button>
+                  <button className="btn btn-gold" onClick={() => { const lp = lastPaymentInfo?.bookingId === successBooking['Booking ID'] ? lastPaymentInfo : undefined; printReceipt(successBooking as unknown as Record<string, string | number>, lp?.date, lp?.method); }}>🖨️ Print Receipt</button>
                   <button className="btn btn-primary" onClick={() => { setSuccessBooking(null); resetForm(); setTab('new-booking'); }}>➕ New Booking</button>
                   <button className="btn btn-outline" onClick={() => { setSuccessBooking(null); resetForm(); setTab('dashboard'); }}>📊 Back to Dashboard</button>
                 </div>
@@ -806,11 +806,9 @@ export default function Home() {
           <div className="modal-body">
             {payModal && (
               <>
-                {(() => { const bk = bookings.find((b) => b['Booking ID'] === payModal.id); return (
                 <div style={{ background: 'var(--bg)', padding: 14, borderRadius: 8, fontSize: 13, marginBottom: 16, border: '1px solid var(--border-light)' }}>
                   <strong>ID:</strong> {payModal.id}<br /><strong>Total:</strong> ₹{fmtN(payModal.total)}<br /><strong>Already Paid:</strong> ₹{fmtN(payModal.paid)}<br /><strong>Remaining:</strong> ₹{fmtN(payModal.total - payModal.paid)}
-                  {bk?.['Payment Date'] && <><br /><strong>Last Payment:</strong> {fmtDate(bk['Payment Date'])} via {bk['Payment Method'] || 'N/A'}</>}
-                </div>); })()}
+                </div>
                 <div className="form-group" style={{ marginBottom: 16 }}>
                   <label>Additional Payment (₹)</label>
                   <input type="number" min="0" max={payModal.total - payModal.paid} step="0.01" value={payAmount} onChange={(e) => { const v = parseFloat(e.target.value); const rem = payModal.total - payModal.paid; if (v > rem) { setPayAmount(String(rem)); } else { setPayAmount(e.target.value); } }} placeholder="Enter amount to pay" />

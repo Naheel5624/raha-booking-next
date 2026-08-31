@@ -127,8 +127,6 @@ export async function POST(req: NextRequest) {
       'Payment Status': paymentStatus,
       'Booking Status': bookingStatus,
       'Booking Notes': (bookingNotes || '').trim(),
-      'Payment Date': '',
-      'Payment Method': '',
       'Created At': now,
     };
 
