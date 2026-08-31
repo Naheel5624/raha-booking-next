@@ -38,7 +38,18 @@ interface TimeSlot {
   paid?: number;
 }
 
-type Tab = 'dashboard' | 'new-booking' | 'today' | 'upcoming' | 'calendar';
+interface PaymentRecord {
+  'Booking ID': string;
+  'Client Name': string;
+  'Event Name': string;
+  'Date': string;
+  'Payment #': number;
+  'Amount': number;
+  'Method': string;
+  'Recorded At': string;
+}
+
+type Tab = 'dashboard' | 'new-booking' | 'today' | 'upcoming' | 'calendar' | 'payments';
 
 function fmtN(n: number) { return n.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 }); }
 function esc(s: string) { return s ? s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
@@ -53,7 +64,7 @@ function fmtDate(d: string) {
   return d;
 }
 
-function printReceipt(b: Record<string, string | number>, extraPayDate?: string, extraPayMethod?: string) {
+function printReceipt(b: Record<string, string | number>, extraPayDate?: string, extraPayMethod?: string, paymentHistory?: { date: string; method: string; amount: number }[]) {
   const id = b['Booking ID'];
   const clientName = b['Client Name'];
   const phone = b['Contact Phone'];
@@ -140,6 +151,23 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
       ${payDate ? `<div class="row"><span class="label">Payment Date</span><span class="value">${payDate}</span></div>` : ''}
       ${payMethod ? `<div class="row"><span class="label">Payment Method</span><span class="value">${payMethod}</span></div>` : ''}
     </div>
+    ${(paymentHistory && paymentHistory.length > 0) ? `<div class="section">
+      <div class="section-title">Payment History</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;">
+        <thead><tr style="background:#F5F0E8;">
+          <th style="padding:8px;text-align:left;border-bottom:2px solid #C9A84C;">#</th>
+          <th style="padding:8px;text-align:left;border-bottom:2px solid #C9A84C;">Date</th>
+          <th style="padding:8px;text-align:left;border-bottom:2px solid #C9A84C;">Method</th>
+          <th style="padding:8px;text-align:right;border-bottom:2px solid #C9A84C;">Amount</th>
+        </tr></thead>
+        <tbody>${paymentHistory.map((p, i) => `<tr style="border-bottom:1px solid #f0f0f0;">
+          <td style="padding:6px 8px;font-weight:700;">${i + 1}</td>
+          <td style="padding:6px 8px;">${p.date}</td>
+          <td style="padding:6px 8px;">${p.method}</td>
+          <td style="padding:6px 8px;text-align:right;font-weight:700;color:#6B1D2A;">₹${fmtN(p.amount)}</td>
+        </tr>`).join('')}</tbody>
+      </table>
+    </div>` : ''}
     ${notes ? `<div class="section"><div class="section-title">Notes</div><div class="notes">${notes}</div></div>` : ''}
   </div>
   <div class="footer">
@@ -203,6 +231,8 @@ export default function Home() {
   const [editModal, setEditModal] = useState<{ id: string; currentTotal: number } | null>(null);
   const [editTotal, setEditTotal] = useState('');
   const [lastPaymentInfo, setLastPaymentInfo] = useState<{ bookingId: string; date: string; method: string } | null>(null);
+  const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [loadingPayments, setLoadingPayments] = useState(false);
 
   const today = localDateStr();
 
@@ -219,6 +249,14 @@ export default function Home() {
     }
   }, []);
 
+  const fetchPayments = useCallback(async () => {
+    try {
+      const res = await fetch('/api/payments');
+      const data = await res.json();
+      if (data.success) setPayments(data.payments || []);
+    } catch (e) { console.error('Fetch payments failed:', e); }
+  }, []);
+
   useEffect(() => { fetchBookings(); }, [fetchBookings]);
 
   // Auto-refresh bookings when switching to data-heavy tabs
@@ -226,7 +264,11 @@ export default function Home() {
     if (tab === 'today' || tab === 'upcoming' || tab === 'dashboard') {
       fetchBookings();
     }
-  }, [tab, fetchBookings]);
+    if (tab === 'payments') {
+      setLoadingPayments(true);
+      fetchPayments().finally(() => setLoadingPayments(false));
+    }
+  }, [tab, fetchBookings, fetchPayments]);
 
   // Periodic refresh every 30s so data stays live
   useEffect(() => {
@@ -530,6 +572,7 @@ export default function Home() {
             ['today', '📋', 'Today', todayBks.length],
             ['upcoming', '📅', 'Upcoming', upcomingBks.length],
             ['calendar', '📆', 'Calendar'],
+            ['payments', '💰', 'Payments', payments.length],
           ] as [Tab, string, string, number?][]).map(([key, icon, label, count]) => (
             <div key={key} className={`nav-tab${tab === key ? ' active' : ''}`} onClick={() => { setTab(key); setSuccessBooking(null); }}>
               <span>{icon}</span> {label}
@@ -866,6 +909,83 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+
+        {/* PAYMENTS */}
+        {tab === 'payments' && (
+          <div className="card">
+            <div className="card-header">
+              <h2>💰 Payment History</h2>
+              <button className="btn btn-outline btn-sm" onClick={() => { setLoadingPayments(true); fetchPayments().finally(() => setLoadingPayments(false)); }}>↻ Refresh</button>
+            </div>
+            <div className="card-body">
+              {loadingPayments ? (
+                <div className="empty-state"><div className="icon">⏳</div><h3>Loading...</h3></div>
+              ) : payments.length === 0 ? (
+                <div className="empty-state"><div className="icon">💰</div><h3>No payments recorded</h3><p>Payment history will appear here as payments are made.</p></div>
+              ) : (
+                <>
+                  {/* Group payments by booking */}
+                  {(() => {
+                    const grouped: Record<string, PaymentRecord[]> = {};
+                    payments.forEach((p) => {
+                      if (!grouped[p['Booking ID']]) grouped[p['Booking ID']] = [];
+                      grouped[p['Booking ID']].push(p);
+                    });
+                    return Object.entries(grouped).map(([bookingId, records]) => {
+                      const first = records[0];
+                      const totalPaid = records.reduce((s, r) => s + r['Amount'], 0);
+                      const booking = bookings.find((b) => b['Booking ID'] === bookingId);
+                      const totalAmount = booking?.['Total Amount'] || 0;
+                      const balance = totalAmount - totalPaid;
+                      return (
+                        <div key={bookingId} style={{ marginBottom: 20, border: '1px solid var(--border-light)', borderRadius: 12, overflow: 'hidden' }}>
+                          <div style={{ padding: '12px 16px', background: 'var(--primary)', color: '#fff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                              <strong style={{ fontSize: 14 }}>{bookingId}</strong>
+                              <span style={{ marginLeft: 10, fontSize: 13, opacity: 0.9 }}>{esc(first['Client Name'])} — {esc(first['Event Name'])}</span>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <div style={{ fontSize: 12, opacity: 0.8 }}>Total: ₹{fmtN(totalAmount)}</div>
+                              <div style={{ fontSize: 12, opacity: 0.8 }}>Paid: ₹{fmtN(totalPaid)}</div>
+                              <div style={{ fontSize: 13, fontWeight: 700, color: balance <= 0 ? '#4ade80' : '#fbbf24' }}>Balance: ₹{fmtN(balance)}</div>
+                            </div>
+                          </div>
+                          <div style={{ padding: 0 }}>
+                            <table className="booking-table" style={{ margin: 0 }}>
+                              <thead>
+                                <tr>
+                                  <th style={{ width: 60 }}>#</th>
+                                  <th>Date</th>
+                                  <th>Method</th>
+                                  <th style={{ textAlign: 'right' }}>Amount</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {records.sort((a, b) => a['Payment #'] - b['Payment #']).map((r, idx) => (
+                                  <tr key={idx}>
+                                    <td><strong>{r['Payment #']}</strong></td>
+                                    <td>{fmtDate(r['Date'])}</td>
+                                    <td>
+                                      <span style={{ fontSize: 12, padding: '2px 10px', borderRadius: 8, background: r['Method'] === 'Cash' ? '#dcfce7' : r['Method'] === 'Bank' ? '#dbeafe' : '#f3e8ff', color: r['Method'] === 'Cash' ? '#166534' : r['Method'] === 'Bank' ? '#1e40af' : '#7c3aed', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                                        {r['Method'] === 'Cash' ? '💵' : r['Method'] === 'Bank' ? '🏦' : '📱'} {r['Method']}
+                                      </span>
+                                    </td>
+                                    <td style={{ textAlign: 'right', fontWeight: 700, color: 'var(--primary)' }}>₹{fmtN(r['Amount'])}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
       {/* LOADING */}
       <div className={`loading-overlay${submitting ? ' show' : ''}`}>

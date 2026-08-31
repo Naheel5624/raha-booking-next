@@ -399,3 +399,102 @@ export function generateBookingId(bookings: Booking[], dateStr: string): string 
 
   return `RA${yy}${mm}${String(seq + 1).padStart(3, '0')}`;
 }
+
+// ============================================================
+// PAYMENTS SHEET (separate sheet for payment history)
+// ============================================================
+
+const PAYMENTS_SHEET = 'Payments';
+const PAYMENTS_HEADERS = [
+  'Booking ID', 'Client Name', 'Event Name', 'Date',
+  'Payment #', 'Amount', 'Method', 'Recorded At'
+];
+
+export interface PaymentRecord {
+  'Booking ID': string;
+  'Client Name': string;
+  'Event Name': string;
+  'Date': string;
+  'Payment #': number;
+  'Amount': number;
+  'Method': string;
+  'Recorded At': string;
+}
+
+async function getPaymentsSheet() {
+  const auth = getAuth();
+  const sheets = google.sheets({ version: 'v4', auth });
+
+  // Check if Payments sheet exists
+  const spreadsheet = await sheets.spreadsheets.get({ spreadsheetId: SPREADSHEET_ID });
+  const existingSheets = spreadsheet.data.sheets || [];
+  const paymentsSheet = existingSheets.find(
+    (s) => s.properties?.title === PAYMENTS_SHEET
+  );
+
+  if (!paymentsSheet) {
+    // Create the Payments sheet with headers
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId: SPREADSHEET_ID,
+      requestBody: {
+        requests: [{ addSheet: { properties: { title: PAYMENTS_SHEET } } }],
+      },
+    });
+
+    await sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${PAYMENTS_SHEET}!A1:H1`,
+      valueInputOption: 'RAW',
+      requestBody: { values: [PAYMENTS_HEADERS] },
+    });
+  }
+
+  return sheets;
+}
+
+export async function appendPaymentRecord(record: PaymentRecord): Promise<void> {
+  if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY || !process.env.GOOGLE_SPREADSHEET_ID) {
+    throw new Error('Google Sheets credentials not configured.');
+  }
+
+  const sheets = await getPaymentsSheet();
+  const row = PAYMENTS_HEADERS.map((h) => record[h as keyof PaymentRecord] ?? '');
+
+  await sheets.spreadsheets.values.append({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${PAYMENTS_SHEET}!A:H`,
+    valueInputOption: 'USER_ENTERED',
+    requestBody: { values: [row] },
+  });
+}
+
+export async function getAllPayments(): Promise<PaymentRecord[]> {
+  if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || !process.env.GOOGLE_PRIVATE_KEY || !process.env.GOOGLE_SPREADSHEET_ID) {
+    return [];
+  }
+
+  try {
+    const sheets = await getPaymentsSheet();
+    const res = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${PAYMENTS_SHEET}!A2:H`,
+    });
+
+    const rows = res.data.values || [];
+    return rows.map((row) => {
+      const obj: Record<string, string | number> = {};
+      PAYMENTS_HEADERS.forEach((h, i) => { obj[h] = row[i] || ''; });
+      obj['Payment #'] = parseInt(obj['Payment #'] as string) || 0;
+      obj['Amount'] = parseFloat(obj['Amount'] as string) || 0;
+      return obj as unknown as PaymentRecord;
+    });
+  } catch (err) {
+    console.error('Failed to read Payments sheet:', err);
+    return [];
+  }
+}
+
+export async function getPaymentsForBooking(bookingId: string): Promise<PaymentRecord[]> {
+  const all = await getAllPayments();
+  return all.filter((p) => p['Booking ID'] === bookingId);
+}

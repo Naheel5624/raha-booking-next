@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getAllBookings, updateBookingField } from '@/lib/sheets';
+import { getAllBookings, updateBookingField, appendPaymentRecord } from '@/lib/sheets';
 
-// POST /api/bookings/payment { bookingId: "BK...", amountPaid: 25000 }
+// POST /api/bookings/payment { bookingId: "RA...", amountPaid: 25000, paymentDate: "2026-08-31", paymentMethod: "Bank" }
 export async function POST(req: NextRequest) {
   try {
     const { bookingId, amountPaid, paymentDate, paymentMethod } = await req.json();
@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
     }
 
     const total = booking['Total Amount'];
+    const previousPaid = booking['Amount Paid'];
     const paid = parseFloat(amountPaid);
     if (isNaN(paid) || paid < 0) {
       return NextResponse.json({ success: false, errors: ['Invalid amount.'] }, { status: 400 });
@@ -37,6 +38,26 @@ export async function POST(req: NextRequest) {
     // Auto-confirm booking when any payment is made
     if (paid > 0 && booking['Booking Status'] === 'Pending') {
       await updateBookingField(bookingId, 'Booking Status', 'Confirmed');
+    }
+
+    // Record this payment in the Payments sheet
+    const additionalAmount = paid - previousPaid;
+    if (additionalAmount > 0) {
+      // Count existing payments for this booking to determine payment number
+      const { getPaymentsForBooking } = await import('@/lib/sheets');
+      const existingPayments = await getPaymentsForBooking(bookingId);
+      const paymentNumber = existingPayments.length + 1;
+
+      await appendPaymentRecord({
+        'Booking ID': bookingId,
+        'Client Name': booking['Client Name'],
+        'Event Name': booking['Event Name'],
+        'Date': paymentDate || new Date().toISOString().slice(0, 10),
+        'Payment #': paymentNumber,
+        'Amount': additionalAmount,
+        'Method': paymentMethod || 'Cash',
+        'Recorded At': new Date().toISOString(),
+      });
     }
 
     return NextResponse.json({
