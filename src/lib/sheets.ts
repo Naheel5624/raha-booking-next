@@ -9,6 +9,7 @@ const HEADERS = [
   'Date', 'Start Time', 'End Time',
   'Total Amount', 'Amount Paid', 'Balance Due', 'Payment Status',
   'Booking Status', 'Hall Type',
+  'Payment Date', 'Payment Method',
   'Booking Notes', 'Created At'
 ];
 
@@ -88,27 +89,29 @@ async function getSheet() {
     // Write headers
     await sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A1:R1`,
+      range: `${SHEET_NAME}!A1:T1`,
       valueInputOption: 'RAW',
       requestBody: { values: [HEADERS] },
     });
   }
 
-  // Auto-migrate: add Hall Type column if missing
+  // Auto-migrate: add missing columns
   try {
     const headerRes = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
       range: `${SHEET_NAME}!A1:Z1`,
     });
     const existingHeaders = headerRes.data.values?.[0] || [];
-    if (!existingHeaders.includes('Hall Type')) {
-      const col = String.fromCharCode(64 + existingHeaders.length + 1);
+    const missingCols = HEADERS.filter((h) => !existingHeaders.includes(h));
+    for (const colName of missingCols) {
+      const col = String.fromCharCode(65 + existingHeaders.length);
       await sheets.spreadsheets.values.update({
         spreadsheetId: SPREADSHEET_ID,
         range: `${SHEET_NAME}!${col}1`,
         valueInputOption: 'RAW',
-        requestBody: { values: [[ 'Hall Type' ]] },
+        requestBody: { values: [[colName]] },
       });
+      existingHeaders.push(colName);
     }
   } catch (e) {
     console.error('Migration check failed:', e);
@@ -140,6 +143,8 @@ export interface Booking {
   'Payment Status': string;
   'Booking Status': string;
   'Hall Type': string;
+  'Payment Date': string;
+  'Payment Method': string;
   'Booking Notes': string;
   'Created At': string;
 }
@@ -154,7 +159,7 @@ export async function getAllBookings(): Promise<Booking[]> {
     const sheets = await getSheet();
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A2:R`,
+      range: `${SHEET_NAME}!A2:T`,
     });
 
     const rows = res.data.values || [];
@@ -189,8 +194,7 @@ export async function appendBooking(booking: Booking): Promise<void> {
     return val;
   });
   await sheets.spreadsheets.values.append({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_NAME}!A:R`,
+    spreadsheetId: SPREADSHEET_ID,      range: `${SHEET_NAME}!A:T`,
     valueInputOption: 'USER_ENTERED',
     requestBody: { values: [row] },
   });
@@ -207,8 +211,7 @@ export async function updateBookingField(
 
   const sheets = await getSheet();
   const res = await sheets.spreadsheets.values.get({
-    spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_NAME}!A2:Q`,
+    spreadsheetId: SPREADSHEET_ID,      range: `${SHEET_NAME}!A2:S`,
   });
 
   const rows = res.data.values || [];

@@ -4,7 +4,7 @@ import { getAllBookings, updateBookingField } from '@/lib/sheets';
 // POST /api/bookings/payment { bookingId: "BK...", amountPaid: 25000 }
 export async function POST(req: NextRequest) {
   try {
-    const { bookingId, amountPaid } = await req.json();
+    const { bookingId, amountPaid, paymentDate, paymentMethod } = await req.json();
     if (!bookingId) {
       return NextResponse.json({ success: false, errors: ['Booking ID required.'] }, { status: 400 });
     }
@@ -33,6 +33,8 @@ export async function POST(req: NextRequest) {
     await updateBookingField(bookingId, 'Amount Paid', paid);
     await updateBookingField(bookingId, 'Balance Due', balance);
     await updateBookingField(bookingId, 'Payment Status', paymentStatus);
+    if (paymentDate) await updateBookingField(bookingId, 'Payment Date', paymentDate);
+    if (paymentMethod) await updateBookingField(bookingId, 'Payment Method', paymentMethod);
 
     // Auto-confirm booking when any payment is made
     if (paid > 0 && booking['Booking Status'] === 'Pending') {
