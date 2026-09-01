@@ -143,31 +143,35 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333
       <div class="row"><span class="label">Booking Status</span><span class="value">${bookStatus}</span></div>
     </div>
     <div class="section">
-      <div class="section-title">Payment Info</div>
-      <div class="row"><span class="label">Total Amount</span><span class="value">₹${fmtN(total)}</span></div>
-      <div class="row"><span class="label">Amount Paid</span><span class="value">₹${fmtN(paid)}</span></div>
-      <div class="row"><span class="label">Balance Due</span><span class="value">₹${fmtN(balance)}</span></div>
-      <div class="row"><span class="label">Payment Status</span><span class="value">${payStatus}</span></div>
-      ${payDate ? `<div class="row"><span class="label">Payment Date</span><span class="value">${payDate}</span></div>` : ''}
-      ${payMethod ? `<div class="row"><span class="label">Payment Method</span><span class="value">${payMethod}</span></div>` : ''}
+      <div class="section-title">Payment Details</div>
+      <div style="padding:14px 0;border-bottom:1px solid #E8E0D8;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:15px;font-weight:700;color:#333;">Total Amount</span>
+        <span style="font-size:15px;font-weight:700;color:#333;">₹${fmtN(total)}</span>
+      </div>
+      ${(paymentHistory && paymentHistory.length > 0) ? paymentHistory.map((p, i) => `<div style="padding:10px 0 10px 16px;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center;font-size:13px;">
+        <span style="color:#555;">${i + 1}. Paid</span>
+        <span style="font-weight:600;color:#333;">₹${fmtN(p.amount)}</span>
+        <span style="color:#888;width:120px;text-align:center;">${p.date}</span>
+        <span style="color:#6B1D2A;font-weight:600;width:80px;text-align:right;">${p.method}</span>
+      </div>`).join('') : (`<div style="padding:10px 0 10px 16px;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center;font-size:13px;">
+        <span style="color:#555;">1. Paid</span>
+        <span style="font-weight:600;color:#333;">₹${fmtN(paid)}</span>
+        ${payDate ? `<span style="color:#888;width:120px;text-align:center;">${payDate}</span>` : '<span style="width:120px;"></span>'}
+        ${payMethod ? `<span style="color:#6B1D2A;font-weight:600;width:80px;text-align:right;">${payMethod}</span>` : '<span style="width:80px;"></span>'}
+      </div>`)}
+      <div style="padding:14px 0;border-bottom:1px solid #E8E0D8;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:13px;font-weight:600;color:#888;">Amount Paid</span>
+        <span style="font-size:14px;font-weight:700;color:#2E7D32;">₹${fmtN(paid)}</span>
+      </div>
+      <div style="padding:14px 0;border-bottom:1px solid #E8E0D8;display:flex;justify-content:space-between;align-items:center;background:#FFF8E1;border-radius:6px;padding:10px 8px;margin-top:4px;">
+        <span style="font-size:15px;font-weight:700;color:#6B1D2A;">Balance Due</span>
+        <span style="font-size:16px;font-weight:700;color:${balance > 0 ? '#B71C1C' : '#2E7D32'};">₹${fmtN(balance)}</span>
+      </div>
+      <div style="padding:8px 0;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:12px;color:#888;">Payment Status</span>
+        <span class="status-badge ${payStatus === 'Paid' ? 'status-paid' : payStatus === 'Partially Paid' ? 'status-partial' : 'status-unpaid'}">${payStatus}</span>
+      </div>
     </div>
-    ${(paymentHistory && paymentHistory.length > 0) ? `<div class="section">
-      <div class="section-title">Payment History</div>
-      <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;">
-        <thead><tr style="background:#F5F0E8;">
-          <th style="padding:8px;text-align:left;border-bottom:2px solid #C9A84C;">#</th>
-          <th style="padding:8px;text-align:left;border-bottom:2px solid #C9A84C;">Date</th>
-          <th style="padding:8px;text-align:left;border-bottom:2px solid #C9A84C;">Method</th>
-          <th style="padding:8px;text-align:right;border-bottom:2px solid #C9A84C;">Amount</th>
-        </tr></thead>
-        <tbody>${paymentHistory.map((p, i) => `<tr style="border-bottom:1px solid #f0f0f0;">
-          <td style="padding:6px 8px;font-weight:700;">${i + 1}</td>
-          <td style="padding:6px 8px;">${p.date}</td>
-          <td style="padding:6px 8px;">${p.method}</td>
-          <td style="padding:6px 8px;text-align:right;font-weight:700;color:#6B1D2A;">₹${fmtN(p.amount)}</td>
-        </tr>`).join('')}</tbody>
-      </table>
-    </div>` : ''}
     ${notes ? `<div class="section"><div class="section-title">Notes</div><div class="notes">${notes}</div></div>` : ''}
   </div>
   <div class="footer">
