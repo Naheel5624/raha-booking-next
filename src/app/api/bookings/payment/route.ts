@@ -1,4 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
+
+// Convert YYYY-MM-DD to DD/Mon/YYYY for spreadsheet storage
+function toDisplayDate(iso: string): string {
+  if (!iso) return iso;
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const parts = iso.split('-');
+  if (parts.length === 3) {
+    const y = parseInt(parts[0]); const m = parseInt(parts[1]) - 1; const d = parseInt(parts[2]);
+    if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+      return `${d}/${months[m]}/${y}`;
+    }
+  }
+  return iso;
+}
+
+
 import { getAllBookings, updateBookingField, appendPaymentRecord } from '@/lib/sheets';
 
 // POST /api/bookings/payment { bookingId: "RA...", amountPaid: 25000, paymentDate: "2026-08-31", paymentMethod: "Bank" }
@@ -52,7 +68,7 @@ export async function POST(req: NextRequest) {
         'Booking ID': bookingId,
         'Client Name': booking['Client Name'],
         'Event Name': booking['Event Name'],
-        'Date': paymentDate || new Date().toISOString().slice(0, 10),
+        'Date': toDisplayDate(paymentDate || new Date().toISOString().slice(0, 10)),
         'Payment #': paymentNumber,
         'Amount': additionalAmount,
         'Method': paymentMethod || 'Cash',

@@ -9,6 +9,22 @@ import {
 } from '@/lib/sheets';
 import { sendBookingConfirmation } from '@/lib/email';
 
+// Convert YYYY-MM-DD to DD/Mon/YYYY for spreadsheet storage
+function toDisplayDate(iso: string): string {
+  if (!iso) return iso;
+  const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const parts = iso.split('-');
+  if (parts.length === 3) {
+    const y = parseInt(parts[0]); const m = parseInt(parts[1]) - 1; const d = parseInt(parts[2]);
+    if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
+      return `${d}/${months[m]}/${y}`;
+    }
+  }
+  return iso;
+}
+
+
+
 // GET /api/bookings — all bookings
 export async function GET() {
   try {
@@ -118,7 +134,7 @@ export async function POST(req: NextRequest) {
       'Contact Phone': contactPhone.trim(),
       'Secondary Contact': secondaryContact.trim(),
       'Client Email': (clientEmail || '').trim(),
-      'Date': eventDate,
+      'Date': toDisplayDate(eventDate),
       'Start Time': startTime,
       'End Time': endTime,
       'Total Amount': total,
