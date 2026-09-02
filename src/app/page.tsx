@@ -64,6 +64,26 @@ function fmtDate(d: string) {
   return d;
 }
 
+// Fetch payment history for a booking from the Payments sheet
+async function fetchPaymentHistory(bookingId: string): Promise<{ date: string; method: string; amount: number }[]> {
+  try {
+    const res = await fetch('/api/payments');
+    const data = await res.json();
+    if (data.success && data.payments) {
+      return data.payments
+        .filter((p: Record<string, string | number>) => String(p['Booking ID']) === bookingId)
+        .map((p: Record<string, string | number>) => ({
+          date: fmtDate(String(p['Date'])),
+          method: String(p['Method'] || ''),
+          amount: Number(p['Amount']) || 0,
+        }));
+    }
+  } catch (e) {
+    console.error('Failed to fetch payment history:', e);
+  }
+  return [];
+}
+
 function printReceipt(b: Record<string, string | number>, extraPayDate?: string, extraPayMethod?: string, paymentHistory?: { date: string; method: string; amount: number }[]) {
   const id = b['Booking ID'];
   const clientName = b['Client Name'];
@@ -486,7 +506,7 @@ export default function Home() {
                     <td>
                       {b['Booking Status'] !== 'Cancelled' && (
                         <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
-                          <button className="btn btn-outline btn-sm" onClick={() => { const lp = lastPaymentInfo?.bookingId === b['Booking ID'] ? lastPaymentInfo : undefined; printReceipt(b as unknown as Record<string, string | number>, lp?.date, lp?.method); }} title="Print Receipt">🖨️</button>
+                          <button className="btn btn-outline btn-sm" onClick={async () => { const hist = await fetchPaymentHistory(String(b['Booking ID'])); printReceipt(b as unknown as Record<string, string | number>, undefined, undefined, hist.length > 0 ? hist : undefined); }} title="Print Receipt">🖨️</button>
                           <button className="btn btn-outline btn-sm" onClick={() => { setEditModal({ id: b['Booking ID'], currentTotal: b['Total Amount'] }); setEditTotal(String(b['Total Amount'])); }} title="Edit Total">✏️</button>
                           <button className="btn btn-outline btn-sm" onClick={() => { setPayModal({ id: b['Booking ID'], total: b['Total Amount'], paid: b['Amount Paid'] }); setPayAmount(''); setPayDate(localDateStr()); setPayMethod('Cash'); }}>💳</button>{' '}
                           <button className="btn btn-danger btn-sm" onClick={() => { setCancelId(b['Booking ID']); setCancelInfo({ event: b['Event Name'], client: b['Client Name'] }); }}>✕</button>
@@ -745,7 +765,7 @@ export default function Home() {
                   ))}
                 </div>
                 <div className="btn-group" style={{ justifyContent: 'center' }}>
-                  <button className="btn btn-gold" onClick={() => { const lp = lastPaymentInfo?.bookingId === successBooking['Booking ID'] ? lastPaymentInfo : undefined; printReceipt(successBooking as unknown as Record<string, string | number>, lp?.date, lp?.method); }}>🖨️ Print Receipt</button>
+                  <button className="btn btn-gold" onClick={async () => { const hist = await fetchPaymentHistory(String(successBooking['Booking ID'])); printReceipt(successBooking as unknown as Record<string, string | number>, undefined, undefined, hist.length > 0 ? hist : undefined); }}>🖨️ Print Receipt</button>
                   <button className="btn btn-primary" onClick={() => { setSuccessBooking(null); resetForm(); setTab('new-booking'); }}>➕ New Booking</button>
                   <button className="btn btn-outline" onClick={() => { setSuccessBooking(null); resetForm(); setTab('dashboard'); }}>📊 Back to Dashboard</button>
                 </div>
