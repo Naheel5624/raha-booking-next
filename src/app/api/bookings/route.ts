@@ -17,7 +17,7 @@ function toDisplayDate(iso: string): string {
   if (parts.length === 3) {
     const y = parseInt(parts[0]); const m = parseInt(parts[1]) - 1; const d = parseInt(parts[2]);
     if (!isNaN(y) && !isNaN(m) && !isNaN(d)) {
-      return `${d}/${months[m]}/${y}`;
+      return `${String(d).padStart(2, "0")}/${months[m]}/${y}`;
     }
   }
   return iso;
