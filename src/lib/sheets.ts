@@ -94,26 +94,49 @@ async function getSheet() {
     });
   }
 
-  // Auto-migrate: add missing columns
+  // Repair header row: ensure A1:Q1 exactly matches HEADERS
+  // This fixes shifted/empty/stale header cells without touching data rows
   try {
     const headerRes = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
       range: `${SHEET_NAME}!A1:Z1`,
     });
-    const existingHeaders = headerRes.data.values?.[0] || [];
-    const missingCols = HEADERS.filter((h) => !existingHeaders.includes(h));
-    for (const colName of missingCols) {
-      const col = String.fromCharCode(65 + existingHeaders.length);
+    const existingHeaders: string[] = headerRes.data.values?.[0] || [];
+    const expectedLen = HEADERS.length;
+    let needsRepair = false;
+
+    // Check if first 17 columns match HEADERS exactly
+    for (let i = 0; i < expectedLen; i++) {
+      const actual = (existingHeaders[i] || '').trim();
+      if (actual !== HEADERS[i]) {
+        needsRepair = true;
+        break;
+      }
+    }
+
+    if (needsRepair) {
+      console.log('Sheet headers need repair. Fixing A1:Q1 to match HEADERS.');
+      // Rewrite headers A1:Q1 with correct values
       await sheets.spreadsheets.values.update({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${SHEET_NAME}!${col}1`,
+        range: `${SHEET_NAME}!A1:Q1`,
         valueInputOption: 'RAW',
-        requestBody: { values: [[colName]] },
+        requestBody: { values: [HEADERS] },
       });
-      existingHeaders.push(colName);
+      // Clear stale columns R onwards (old Payment Date/Method, duplicates)
+      if (existingHeaders.length > expectedLen) {
+        const staleEnd = String.fromCharCode(65 + Math.min(existingHeaders.length - 1, 25));
+        await sheets.spreadsheets.values.update({
+          spreadsheetId: SPREADSHEET_ID,
+          range: `${SHEET_NAME}!R1:${staleEnd}1`,
+          valueInputOption: 'RAW',
+          requestBody: { values: [new Array(existingHeaders.length - expectedLen).fill("")] },
+        });
+      }
+      console.log('Header repair complete.');
     }
   } catch (e) {
-    console.error('Migration check failed:', e);
+    console.error('Header repair failed:', e);
   }
   return sheets;
 }
