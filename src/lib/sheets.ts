@@ -220,25 +220,32 @@ export async function appendBooking(booking: Booking): Promise<void> {
 
   const sheets = await getSheet();
 
-  // Read ACTUAL sheet headers to place values in correct columns by name
-  const headerRes = await sheets.spreadsheets.values.get({
+  // Find the next empty row by reading column A
+  const colARes = await sheets.spreadsheets.values.get({
     spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_NAME}!A1:Z1`,
+    range: `${SHEET_NAME}!A2:A`,
   });
-  const actualHeaders: string[] = headerRes.data.values?.[0] || HEADERS;
+  const existingRows = colARes.data.values || [];
+  let nextRow = existingRows.length + 2; // +2 because data starts at row 2
+  // Skip any empty rows at the end
+  while (nextRow > 2 && (!existingRows[nextRow - 2] || !existingRows[nextRow - 2][0])) {
+    nextRow--;
+  }
+  // Actually find the true last row with data
+  nextRow = existingRows.length + 2;
 
-  const row = actualHeaders.map((h: string) => {
-    const key = HEADERS.find((hdr) => hdr.toLowerCase() === h.toLowerCase().trim());
-    if (!key) return '';
-    const val = booking[key as keyof Booking] ?? '';
+  // Build row in HEADERS order (A-Q)
+  const row = HEADERS.map((h) => {
+    const val = booking[h as keyof Booking] ?? '';
     // Prefix date with ' to prevent Google Sheets auto-formatting
-    if (key === 'Date' && val) return "'" + val;
+    if (h === 'Date' && val) return "'" + val;
     return val;
   });
 
-  await sheets.spreadsheets.values.append({
+  // Write to exact row and column range A-Q
+  await sheets.spreadsheets.values.update({
     spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_NAME}!A:Q`,
+    range: `${SHEET_NAME}!A${nextRow}:Q${nextRow}`,
     valueInputOption: 'USER_ENTERED',
     requestBody: { values: [row] },
   });
