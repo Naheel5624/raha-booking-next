@@ -154,16 +154,27 @@ export async function getAllBookings(): Promise<Booking[]> {
 
   try {
     const sheets = await getSheet();
+
+    // Read ACTUAL sheet headers to map columns correctly by name
+    const headerRes = await sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `${SHEET_NAME}!A1:Z1`,
+    });
+    const actualHeaders: string[] = headerRes.data.values?.[0] || HEADERS;
+
     const res = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${SHEET_NAME}!A2:R`,
+      range: `${SHEET_NAME}!A2:Z`,
     });
 
     const rows = res.data.values || [];
     return rows.map((row) => {
       const obj: Record<string, string | number> = {};
-      HEADERS.forEach((h, i) => {
-        obj[h] = row[i] || '';
+      HEADERS.forEach((h) => {
+        const idx = actualHeaders.findIndex(
+          (ah: string) => ah.toLowerCase().trim() === h.toLowerCase()
+        );
+        obj[h] = idx >= 0 ? (row[idx] || '') : '';
       });
       obj['Total Amount'] = parseFloat(obj['Total Amount'] as string) || 0;
       obj['Amount Paid'] = parseFloat(obj['Amount Paid'] as string) || 0;
@@ -184,14 +195,26 @@ export async function appendBooking(booking: Booking): Promise<void> {
   }
 
   const sheets = await getSheet();
-  const row = HEADERS.map((h) => {
-    const val = booking[h as keyof Booking] ?? '';
+
+  // Read ACTUAL sheet headers to place values in correct columns by name
+  const headerRes = await sheets.spreadsheets.values.get({
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${SHEET_NAME}!A1:Z1`,
+  });
+  const actualHeaders: string[] = headerRes.data.values?.[0] || HEADERS;
+
+  const row = actualHeaders.map((h: string) => {
+    const key = HEADERS.find((hdr) => hdr.toLowerCase() === h.toLowerCase().trim());
+    if (!key) return '';
+    const val = booking[key as keyof Booking] ?? '';
     // Prefix date with ' to prevent Google Sheets auto-formatting
-    if (h === 'Date' && val) return "'" + val;
+    if (key === 'Date' && val) return "'" + val;
     return val;
   });
+
   await sheets.spreadsheets.values.append({
-    spreadsheetId: SPREADSHEET_ID,      range: `${SHEET_NAME}!A:R`,
+    spreadsheetId: SPREADSHEET_ID,
+    range: `${SHEET_NAME}!A:Z`,
     valueInputOption: 'USER_ENTERED',
     requestBody: { values: [row] },
   });
