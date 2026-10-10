@@ -123,14 +123,15 @@ async function getSheet() {
         valueInputOption: 'RAW',
         requestBody: { values: [HEADERS] },
       });
-      // Clear stale columns R onwards (old Payment Date/Method, duplicates)
-      if (existingHeaders.length > expectedLen) {
-        const staleEnd = String.fromCharCode(65 + Math.min(existingHeaders.length - 1, 25));
+      // Clear stale columns R onwards (old Payment Date/Method, duplicates) in header AND all data rows
+      const staleEndCol = String.fromCharCode(65 + Math.min(Math.max(existingHeaders.length, 21) - 1, 25));
+      const numStale = Math.max(existingHeaders.length, 21) - expectedLen;
+      if (numStale > 0) {
         await sheets.spreadsheets.values.update({
           spreadsheetId: SPREADSHEET_ID,
-          range: `${SHEET_NAME}!R1:${staleEnd}1`,
+          range: `${SHEET_NAME}!R1:${staleEndCol}200`,
           valueInputOption: 'RAW',
-          requestBody: { values: [new Array(existingHeaders.length - expectedLen).fill("")] },
+          requestBody: { values: Array(200).fill(null).map(() => new Array(numStale).fill("")) },
         });
       }
       console.log('Header repair complete.');
@@ -237,7 +238,7 @@ export async function appendBooking(booking: Booking): Promise<void> {
 
   await sheets.spreadsheets.values.append({
     spreadsheetId: SPREADSHEET_ID,
-    range: `${SHEET_NAME}!A:Z`,
+    range: `${SHEET_NAME}!A:Q`,
     valueInputOption: 'USER_ENTERED',
     requestBody: { values: [row] },
   });
